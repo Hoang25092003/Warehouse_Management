@@ -1,0 +1,67 @@
+.main-content {
+  padding: 20px;
+  margin-top: 20px;
+}
+
+/* Sidebar sliding effect */
+.sidebar {
+  background-color: #007bff; /* Blue background */
+  color: white; /* White text */
+  transition: transform 0.3s ease; /* Smooth sliding effect */
+  height: auto; /* Adjust height dynamically based on content */
+  min-height: 100vh; /* Ensure it covers the full viewport height */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+  padding-top: 20px; /* Add padding to move content down */
+}
+
+.sidebar a {
+  color: white; /* White text for links */
+  text-decoration: none; /* Remove underline */
+  font-weight: normal; /* Default font weight */
+  padding: 10px 15px; /* Add padding for better spacing */
+  display: block; /* Make links block-level for full clickable area */
+  border-radius: 4px; /* Rounded corners for highlight effect */
+}
+
+.sidebar a:hover {
+  color: #d1ecf1; /* Light blue on hover */
+  background-color: #0056b3; /* Darker blue for hover highlight */
+}
+
+.sidebar a.active {
+  font-weight: bold; /* Bold text for active link */
+  background-color: #0056b3; /* Highlight background for active link */
+  color: #ffffff; /* Ensure text remains white */
+}
+
+.sidebar-open {
+  transform: translateX(0); /* Fully visible */
+}
+
+.sidebar-closed {
+  transform: translateX(-100%); /* Hidden off-screen */
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle {
+  position: fixed;
+  top: 100px; /* Position above the "Trang chủ" link */
+  left: 10px; /* Default position when sidebar is closed */
+  z-index: 1000;
+  transition: left 0.3s ease, opacity 0.3s ease;
+}
+
+.sidebar-open ~ .sidebar-toggle {
+  opacity: 0; /* Hide the toggle button when the sidebar is open */
+  pointer-events: none; /* Disable interactions when hidden */
+}
+
+/* Prevent content overlap */
+.container-fluid {
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Hide the sidebar toggle button when the sidebar is open */
+.sidebar-toggle.hidden {
+  display: none;
+}
