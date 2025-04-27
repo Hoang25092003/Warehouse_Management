@@ -8,25 +8,32 @@ import "react-datepicker/dist/react-datepicker.css";
 
 function Reports() {
   const [reportType, setReportType] = useState("");
-  // const [startDate, setStartDate] = useState(null);
-  // const [endDate, setEndDate] = useState(null);
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [savedReports, setSavedReports] = useState([]);
-  const [user, setUser] = useState(null);
+  const [showReport, setShowReport] = useState(false);
+  const [isGenerated, setIsGenerated] = useState(false);
+
 
   // Lấy danh sách báo cáo đã lưu
+  const fetchSavedReports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:3000/api/savedreports', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setSavedReports(response.data);
+    } catch (err) {
+      console.error("Lỗi khi lấy danh sách báo cáo:", err);
+    }
+  };
   useEffect(() => {
-    const fetchSavedReports = async () => {
-      try {
-        const response = await axios.get('http://localhost:3000/api/reports');
-        setSavedReports(response.data);
-      } catch (err) {
-        console.error("Lỗi khi lấy danh sách báo cáo:", err);
-      }
-    };
     fetchSavedReports();
+    setIsGenerated(false); // cho phép tạo lại khi thay đổi loại báo cáo
+    setShowReport(false);  // ẩn bảng cũ khi chọn loại mới
   }, []);
 
   const generateReport = async () => {
@@ -35,16 +42,12 @@ function Reports() {
       return;
     }
 
+    setShowReport(false);
     setLoading(true);
     setError(null);
-
+    setReportData(null);
     try {
       let endpoint = '';
-      const params = {};
-
-      // if (startDate) params.startDate = startDate.toISOString().split('T')[0];
-      // if (endDate) params.endDate = endDate.toISOString().split('T')[0];
-
       switch (reportType) {
         case 'import':
           endpoint = 'http://localhost:3000/api/reports/imports';
@@ -55,37 +58,59 @@ function Reports() {
         case 'inventory':
           endpoint = 'http://localhost:3000/api/reports/inventory';
           break;
-        case 'monthly':
-        case 'quarterly':
-        case 'annual':
-          endpoint = 'http://localhost:3000/api/reports/summary';
-          params.period = reportType;
-          break;
         default:
-          break;
+          setError("Loại báo cáo không hợp lệ");
+          return;
       }
 
-      const response = await axios.get(endpoint, { params });
+      const token = localStorage.getItem('token');
+      const response = await axios.get(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
       setReportData(response.data);
 
       // Lưu báo cáo vào database
-      const token = localStorage.getItem("token");
       const payload = token.split('.')[1];
       const decodedPayload = atob(payload);
       const userData = JSON.parse(decodedPayload);
-      setUser(userData);
+
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const year = now.getFullYear();
+
+      let reportLabel = '';
+      switch (reportType) {
+        case 'import': reportLabel = 'nhập hàng'; break;
+        case 'export': reportLabel = 'xuất hàng'; break;
+        case 'inventory': reportLabel = 'tồn kho'; break;
+        default: reportLabel = 'báo cáo'; break;
+      }
+
+      const reportContent = `Báo cáo ${reportLabel} tháng ${month}/${year}`;
+
+
       await axios.post('http://localhost:3000/api/reports', {
-        report_type: reportType || 'import',
-        // start_date: startDate,
-        // end_date: endDate,
-        user_id: user.user_id || "US001",
-        content: JSON.stringify(response.data)
+        report_type: reportType,
+        user_id: userData.user_id,
+        content: reportContent
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
-      // Cập nhật danh sách báo cáo đã lưu
-      const reportsResponse = await axios.get('http://localhost:3000/api/reports');
-      setSavedReports(reportsResponse.data);
+      console.log("UserID:", userData.user_id);
+      console.log("Dữ liệu báo cáo:", response.data);
 
+
+      // Cập nhật danh sách báo cáo đã lưu
+      fetchSavedReports();
+
+      setShowReport(true);
+      setIsGenerated(true);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -213,32 +238,8 @@ function Reports() {
             </tbody>
           </Table>
         );
-
-      default:
-        return (
-          <Table striped bordered hover responsive className="mt-3">
-            <thead className="table-dark">
-              <tr>
-                <th>Thời gian</th>
-                <th>Tổng nhập</th>
-                <th>Tổng xuất</th>
-                <th>Tồn kho</th>
-                <th>Doanh thu</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reportData.map((item) => (
-                <tr key={item.period}>
-                  <td>{item.period}</td>
-                  <td>{item.total_import.toLocaleString()}</td>
-                  <td>{item.total_export.toLocaleString()}</td>
-                  <td>{item.total_inventory.toLocaleString()}</td>
-                  <td>{item.revenue.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        );
+        default:
+        return null;
     }
   };
 
@@ -260,59 +261,24 @@ function Reports() {
                 <Form.Control
                   as="select"
                   value={reportType}
-                  onChange={(e) => setReportType(e.target.value)}
+                  onChange={(e) => {
+                    setReportType(e.target.value)
+                    setShowReport(false);
+                    setIsGenerated(false);
+                  }}
                 >
                   <option value="">-- Chọn loại --</option>
                   <option value="import">Báo cáo nhập hàng</option>
                   <option value="export">Báo cáo xuất hàng</option>
                   <option value="inventory">Báo cáo tồn kho</option>
-                  <option value="monthly">Báo cáo tháng</option>
-                  <option value="quarterly">Báo cáo quý</option>
-                  <option value="annual">Báo cáo năm</option>
                 </Form.Control>
               </Form.Group>
             </Col>
-
-            {/* <Col md={3}>
-              <Form.Group controlId="startDate">
-                <Form.Label>Từ ngày</Form.Label>
-                <DatePicker
-                  selected={startDate}
-                  onChange={(date) => setStartDate(date)}
-                  selectsStart
-                  startDate={startDate}
-                  endDate={endDate}
-                  dateFormat="dd/MM/yyyy"
-                  className="form-control"
-                  placeholderText="Chọn ngày bắt đầu"
-                  isClearable
-                />
-              </Form.Group>
-            </Col>
-
-            <Col md={3}>
-              <Form.Group controlId="endDate">
-                <Form.Label>Đến ngày</Form.Label>
-                <DatePicker
-                  selected={endDate}
-                  onChange={(date) => setEndDate(date)}
-                  selectsEnd
-                  startDate={startDate}
-                  endDate={endDate}
-                  minDate={startDate}
-                  dateFormat="dd/MM/yyyy"
-                  className="form-control"
-                  placeholderText="Chọn ngày kết thúc"
-                  isClearable
-                />
-              </Form.Group>
-            </Col> */}
-
             <Col md={2} className="d-flex align-items-end">
               <Button
                 variant="primary"
                 onClick={generateReport}
-                disabled={loading || !reportType}
+                disabled={isGenerated || !reportType}
               >
                 {loading ? (
                   <>
@@ -327,7 +293,7 @@ function Reports() {
         </div>
       </div>
 
-      {reportData && (
+      {showReport && reportData && (
         <div className="card mb-4">
           <div className="card-header d-flex justify-content-between align-items-center">
             <h5>Kết quả báo cáo</h5>
@@ -336,7 +302,7 @@ function Reports() {
               Xuất Excel
             </Button>
           </div>
-          <div className="card-body">
+          <div key={reportType} className="card-body">
             {renderReportTable()}
           </div>
         </div>
@@ -354,7 +320,7 @@ function Reports() {
                 <th>Loại báo cáo</th>
                 <th>Ngày tạo</th>
                 <th>Người tạo</th>
-                <th>Thao tác</th>
+                <th>Ghi Chú</th>
               </tr>
             </thead>
             <tbody>
@@ -365,14 +331,11 @@ function Reports() {
                     {report.report_type === 'import' && 'Nhập hàng'}
                     {report.report_type === 'export' && 'Xuất hàng'}
                     {report.report_type === 'inventory' && 'Tồn kho'}
-                    {report.report_type === 'monthly' && 'Tháng'}
-                    {report.report_type === 'quarterly' && 'Quý'}
-                    {report.report_type === 'annual' && 'Năm'}
                   </td>
                   <td>{new Date(report.generated_date).toLocaleString('vi-VN')}</td>
-                  <td>{report.user_id}</td>
+                  <td>{report.user_name}</td>
                   <td>
-                    <Button variant="info" size="sm">Xem lại</Button>
+                    {report.content}
                   </td>
                 </tr>
               ))}

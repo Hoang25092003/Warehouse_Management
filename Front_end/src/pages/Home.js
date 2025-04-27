@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Card, Row, Col, Spinner } from "react-bootstrap";
 import { Bar, Pie, Line } from "react-chartjs-2";
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from "chart.js";
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 
 // Register Chart.js components
@@ -11,14 +12,24 @@ function Home() {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/dashboard');
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:3000/api/dashboard', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         setDashboardData(response.data);
       } catch (err) {
-        setError(err.message);
+        if (err.response?.status === 403) {
+          navigate('/login');
+        } else {
+          setError(err.response?.data?.message || err.message);
+        }
       } finally {
         setLoading(false);
       }
@@ -26,6 +37,7 @@ function Home() {
 
     fetchDashboardData();
   }, []);
+
 
   if (loading) {
     return (
@@ -148,9 +160,9 @@ function Home() {
           <div className="mt-4">
             <h5 className="text-center">Biểu đồ nhập/xuất hôm nay</h5>
             <div style={{ height: "200px" }}>
-              <Line 
-                data={importExportData} 
-                options={{ 
+              <Line
+                data={importExportData}
+                options={{
                   maintainAspectRatio: false,
                   plugins: {
                     title: {
@@ -158,7 +170,7 @@ function Home() {
                       text: `Tổng: ${dashboardData.todayImports + dashboardData.todayExports} sản phẩm`
                     }
                   }
-                }} 
+                }}
               />
             </div>
           </div>

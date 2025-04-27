@@ -1,35 +1,51 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Row, Col, Form, Modal, Spinner, Alert } from "react-bootstrap";
+import { Table, Spinner, Alert, Form, Button, Row, Col, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faEdit, faTrash, faSync } from "@fortawesome/free-solid-svg-icons";
+import { faSort, faSortUp, faSortDown, faEdit, faTrash, faPlus, faSync } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
+import { toast } from 'react-toastify';
 
 function Account() {
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [searchTerm, setSearchTerm] = useState("");
   const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ 
-    username: "", 
-    email: "", 
-    role: "staff", 
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [formUser, setFormUser] = useState({
+    user_id: "",
+    username: "",
+    email: "",
+    role: "staff",
     password: "",
     fullname: "",
     phone: ""
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Load dữ liệu khi component mount
   useEffect(() => {
     fetchAccounts();
   }, []);
 
   const fetchAccounts = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get('http://localhost:3000/api/users');
-      setAccounts(response.data);
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:3000/api/users', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      // Mặc định tất cả password đều ẩn
+      const accountsWithHiddenPasswords = response.data.map(account => ({
+        ...account,
+        showPassword: false
+      }));
+
+      setAccounts(accountsWithHiddenPasswords);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,128 +53,296 @@ function Account() {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key) => {
+    if (sortConfig.key !== key) return faSort;
+    return sortConfig.direction === "asc" ? faSortUp : faSortDown;
   };
 
   const handleEdit = (account) => {
-    setFormData({
+    setEditingUserId(account.user_id);
+    setFormUser({
+      user_id: account.user_id,
       username: account.username,
       email: account.email,
       role: account.role,
       fullname: account.fullname || "",
       phone: account.phone || "",
-      password: "" // Reset password khi edit
+      password: account.password
     });
-    setPasswordConfirm("");
-    setEditingId(account.user_id);
+    setPasswordConfirm(account.password);
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (account) => {
+    console.log(`Xóa User ID: ${account.user_id}`);
     if (window.confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) {
       try {
-        setLoading(true);
-        await axios.delete(`http://localhost:3000/api/users/${id}`);
-        await fetchAccounts();
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:3000/api/users/${account.user_id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setAccounts((prevAccounts) => prevAccounts.filter((acc) => acc.user_id !== account.user_id));
+        toast.success("Xóa tài khoản thành công");
       } catch (err) {
-        setError(err.response?.data?.error || err.message);
-      } finally {
-        setLoading(false);
+        console.error('❌ Chi tiết lỗi khi xóa tài khoản:', err);
+        // Nếu là lỗi từ server có message
+        if (err.response && err.response.data && err.response.data.error) {
+          toast.error(err.response.data.error); // ví dụ: "Không thể xóa tài khoản admin"
+        } else {
+          toast.error("Đã xảy ra lỗi khi xóa tài khoản!");
+        }
       }
     }
   };
 
-  const handleSubmit = async () => {
-    // Validate form
-    if (!formData.username || !formData.email || !formData.role) {
-      setError("Vui lòng điền đầy đủ thông tin bắt buộc");
-      return;
+  const handleSave = () => {
+    if (editingUserId) {
+      handleSaveEdit();
+    } else {
+      handleAddAccount();
     }
+  }
 
-    // Validate password khi tạo mới hoặc khi đổi password
-    if ((!editingId || formData.password) && formData.password !== passwordConfirm) {
-      setError("Mật khẩu xác nhận không khớp");
-      return;
-    }
-
+  const handleAddAccount = async () => {
     try {
-      setLoading(true);
-      
-      if (editingId) {
-        // Cập nhật tài khoản
-        await axios.put(`http://localhost:3000/api/users/${editingId}`, formData);
-      } else {
-        // Tạo tài khoản mới
-        await axios.post('http://localhost:3000/api/users', formData);
+      const token = localStorage.getItem('token');
+      const newAccount = { ...formUser };
+      if (formUser.password !== passwordConfirm) {
+        toast.error("Mật khẩu không khớp!");
+        return;
       }
-      
-      await fetchAccounts();
+      if (!formUser.username || !formUser.email || !formUser.password) {
+        toast.error("Vui lòng điền đầy đủ thông tin!");
+        return;
+      }
+      if (formUser.password.length < 6) {
+        toast.error("Mật khẩu phải có ít nhất 6 ký tự!");
+        return;
+      }
+      if (formUser.phone && !/^\d{10}$/.test(formUser.phone)) {
+        toast.error("Số điện thoại không hợp lệ!");
+        return;
+      }
+      if (formUser.email && !/\S+@\S+\.\S+/.test(formUser.email)) {
+        toast.error("Email không hợp lệ!");
+        return;
+      }
+      const response = await axios.post('http://localhost:3000/api/users', newAccount, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setAccounts((prevAccounts) => [...prevAccounts, response.data]);
       handleClose();
+      toast.success("Tạo tài khoản thành công");
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
-    } finally {
-      setLoading(false);
+      console.error('❌ Chi tiết lỗi khi tạo tài khoản:', err);
+      toast.error("Đã xảy ra lỗi khi tạo tài khoản!");
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      const updatedWarehouse = {
+        user_id: formUser.user_id,
+        username: formUser.username,
+        email: formUser.email,
+        password: formUser.password,
+        fullname: formUser.fullname,
+        phone: formUser.phone,
+        role: formUser.role
+      };
+      if (formUser.password !== passwordConfirm) {
+        toast.error("Mật khẩu không khớp!");
+        return;
+      }
+      if (!formUser.username || !formUser.email) {
+        toast.error("Vui lòng điền đầy đủ thông tin!");
+        return;
+      }
+      if (formUser.phone && !/^\d{10}$/.test(formUser.phone)) {
+        toast.error("Số điện thoại không hợp lệ!");
+        return;
+      }
+      if (formUser.email && !/\S+@\S+\.\S+/.test(formUser.email)) {
+        toast.error("Email không hợp lệ!");
+        return;
+      }
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`http://localhost:3000/api/users/${editingUserId}`, updatedWarehouse, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setAccounts((prevAccounts) =>
+        prevAccounts.map((account) =>
+          account.user_id === editingUserId ? { ...account, ...response.data } : account
+        )
+      );
+      handleClose();
+      toast.success("Cập nhật tài khoản thành công");
+
+    } catch (err) {
+      console.error('❌ Chi tiết lỗi khi cập nhật tài khoản:', err);
+      toast.error("Đã xảy ra lỗi khi cập nhật tài khoản!");
     }
   };
 
   const handleClose = () => {
     setShowModal(false);
-    setEditingId(null);
-    setFormData({ 
-      username: "", 
-      email: "", 
-      role: "staff", 
+    setEditingUserId(null);
+    setFormUser({
+      user_id: "",
+      username: "",
+      email: "",
+      role: "staff",
       password: "",
       fullname: "",
       phone: ""
     });
     setPasswordConfirm("");
-    setError(null);
   };
 
+  const handleShowPasswordClick = (userId) => {
+    setSelectedUserId(userId);
+    setConfirmModalVisible(true);
+  };
+
+  const handleConfirmPassword = () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Không tìm thấy token đăng nhập.");
+      return;
+    }
+
+    try {
+      const payload = token.split('.')[1];
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const decodedPayload = JSON.parse(atob(base64));
+      const currentUserId = decodedPayload.user_id;
+
+      const account = accounts.find(acc => acc.user_id === currentUserId);
+
+      if (account && confirmPassword === account.password) {
+        const updatedAccounts = accounts.map(acc =>
+          acc.user_id === selectedUserId ? { ...acc, showPassword: true } : acc
+        );
+        setAccounts(updatedAccounts);
+        setConfirmModalVisible(false);
+        setConfirmPassword("");
+      } else {
+        toast.error("Mật khẩu xác nhận không đúng!");
+      }
+    } catch (err) {
+      console.error("Lỗi khi giải mã token:", err);
+      toast.error("Token không hợp lệ.");
+      localStorage.removeItem("token");
+    }
+  };
+
+
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mt-4">
+        <Alert variant="danger">
+          Error loading accounts: {error}
+        </Alert>
+      </div>
+    );
+  }
   return (
     <div className="container mt-4">
       <h1 className="text-center mb-4">Quản Lý Tài Khoản</h1>
-
-      {error && <Alert variant="danger">{error}</Alert>}
-
       <div className="d-flex justify-content-between mb-3">
         <Button variant="primary" onClick={() => setShowModal(true)}>
           <FontAwesomeIcon icon={faPlus} className="me-2" />
           Thêm tài khoản
         </Button>
+        <Form className="mb-3 d-flex justify-content-end align-items-center">
+          <Form.Group controlId="searchBar" className="d-flex align-items-center">
+            <Form.Control
+              type="text"
+              placeholder="Tìm kiếm tài khoản..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: "700px" }}
+            />
+          </Form.Group>
+        </Form>
         <Button variant="info" onClick={fetchAccounts} disabled={loading}>
           <FontAwesomeIcon icon={faSync} className="me-2" />
           {loading ? 'Đang tải...' : 'Làm mới'}
         </Button>
       </div>
+      <Table striped bordered hover responsive>
+        <thead className="table-dark">
+          <tr>
+            <th>#</th>
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("username")}>
+              Tên tài khoản <FontAwesomeIcon icon={getSortIcon("username")} /></th>
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("password")}>
+              Mật khẩu <FontAwesomeIcon icon={getSortIcon("password")} /></th>
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("email")}>
+              Email <FontAwesomeIcon icon={getSortIcon("email")} /></th>
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("fullname")}>
+              Họ tên <FontAwesomeIcon icon={getSortIcon("fullname")} /></th>
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("phone")}>
+              SĐT <FontAwesomeIcon icon={getSortIcon("phone")} /></th>
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("role")}>
+              Vai trò <FontAwesomeIcon icon={getSortIcon("role")} /></th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {accounts
+            .filter((account) =>
+              (account?.username || '').toLowerCase().includes(searchTerm.toLowerCase())
+            ).sort((a, b) => {
+              if (!sortConfig.key) return 0;
+              const valA = typeof a[sortConfig.key] === "string" ? a[sortConfig.key].toLowerCase() : a[sortConfig.key];
+              const valB = typeof b[sortConfig.key] === "string" ? b[sortConfig.key].toLowerCase() : b[sortConfig.key];
 
-      {loading && accounts.length === 0 ? (
-        <div className="text-center mt-5">
-          <Spinner animation="border" variant="primary" />
-        </div>
-      ) : (
-        <Table striped bordered hover responsive>
-          <thead className="table-dark">
-            <tr>
-              <th>#</th>
-              <th>Tên tài khoản</th>
-              <th>Mật khẩu</th>
-              <th>Email</th>
-              <th>Họ tên</th>
-              <th>Điện thoại</th>
-              <th>Vai trò</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((account, index) => (
+              if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+              if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+              return 0;
+            })
+            .map((account, index) => (
               <tr key={account.user_id}>
                 <td>{index + 1}</td>
                 <td>{account.username}</td>
-                <td>{account.password}</td>
+                <td>
+                  {account.showPassword ? (
+                    <span>{account.password}</span>
+                  ) : (
+                    <>
+                      <span>******</span>{" "}
+                      <Button variant="light" size="sm" onClick={() => handleShowPasswordClick(account.user_id)}>
+                        👁
+                      </Button>
+                    </>
+                  )}
+                </td>
                 <td>{account.email}</td>
                 <td>{account.fullname || 'N/A'}</td>
                 <td>{account.phone || 'N/A'}</td>
@@ -169,29 +353,26 @@ function Account() {
                     size="sm"
                     className="me-2"
                     onClick={() => handleEdit(account)}
-                    disabled={loading}
                   >
                     <FontAwesomeIcon icon={faEdit} /> Sửa
                   </Button>
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => handleDelete(account.user_id)}
-                    disabled={loading}
+                    onClick={() => handleDelete(account)}
                   >
                     <FontAwesomeIcon icon={faTrash} /> Xóa
                   </Button>
                 </td>
               </tr>
             ))}
-          </tbody>
-        </Table>
-      )}
+        </tbody>
+      </Table>
 
       <Modal show={showModal} onHide={handleClose} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>
-            {editingId ? "Chỉnh sửa tài khoản" : "Thêm tài khoản mới"}
+            {editingUserId ? "Chỉnh sửa tài khoản" : "Thêm tài khoản mới"}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -199,24 +380,23 @@ function Account() {
             <Row>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="username">
-                  <Form.Label>Tên tài khoản *</Form.Label>
+                  <Form.Label>Tên tài khoản</Form.Label>
                   <Form.Control
                     type="text"
                     name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    disabled={!!editingId}
+                    value={formUser.username}
+                    onChange={(e) => setFormUser({ ...formUser, username: e.target.value })}
                   />
                 </Form.Group>
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="email">
-                  <Form.Label>Email *</Form.Label>
+                  <Form.Label>Email</Form.Label>
                   <Form.Control
                     type="email"
                     name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
+                    value={formUser.email}
+                    onChange={(e) => setFormUser({ ...formUser, email: e.target.value })}
                   />
                 </Form.Group>
               </Col>
@@ -229,8 +409,8 @@ function Account() {
                   <Form.Control
                     type="text"
                     name="fullname"
-                    value={formData.fullname}
-                    onChange={handleInputChange}
+                    value={formUser.fullname}
+                    onChange={(e) => setFormUser({ ...formUser, fullname: e.target.value })}
                   />
                 </Form.Group>
               </Col>
@@ -240,8 +420,8 @@ function Account() {
                   <Form.Control
                     type="tel"
                     name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
+                    value={formUser.phone}
+                    onChange={(e) => setFormUser({ ...formUser, phone: e.target.value })}
                   />
                 </Form.Group>
               </Col>
@@ -251,25 +431,25 @@ function Account() {
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="password">
                   <Form.Label>
-                    {editingId ? "Mật khẩu mới" : "Mật khẩu *"}
-                    {editingId && <small className="text-muted"> (Để trống nếu không đổi)</small>}
+                    {editingUserId ? "Mật khẩu mới" : "Mật khẩu *"}
+                    {editingUserId && <small className="text-muted"> (Để nguyên nếu không đổi)</small>}
                   </Form.Label>
                   <Form.Control
                     type="password"
                     name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
+                    value={formUser.password}
+                    onChange={(e) => setFormUser({ ...formUser, password: e.target.value })}
                   />
                 </Form.Group>
               </Col>
               <Col md={6}>
                 <Form.Group className="mb-3" controlId="passwordConfirm">
-                  <Form.Label>Xác nhận mật khẩu {!editingId && '*'}</Form.Label>
+                  <Form.Label>Xác nhận mật khẩu {!editingUserId && '*'}</Form.Label>
                   <Form.Control
                     type="password"
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.target.value)}
-                    disabled={!formData.password && !!editingId}
+                    disabled={!formUser.password && !!editingUserId}
                   />
                 </Form.Group>
               </Col>
@@ -280,8 +460,8 @@ function Account() {
               <Form.Control
                 as="select"
                 name="role"
-                value={formData.role}
-                onChange={handleInputChange}
+                value={formUser.role}
+                onChange={(e) => setFormUser({ ...formUser, role: e.target.value })}
               >
                 <option value="admin">Quản trị viên</option>
                 <option value="staff">Nhân viên</option>
@@ -290,18 +470,40 @@ function Account() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose} disabled={loading}>
+          <Button variant="secondary" onClick={handleClose}>
             Hủy
           </Button>
-          <Button variant="primary" onClick={handleSubmit} disabled={loading}>
+          <Button variant="primary" onClick={handleSave}>
             {loading ? (
               <Spinner animation="border" size="sm" />
             ) : (
-              editingId ? "Cập nhật" : "Tạo tài khoản"
+              editingUserId ? "Cập nhật" : "Tạo tài khoản"
             )}
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <Modal show={confirmModalVisible} onHide={() => setConfirmModalVisible(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Xác nhận mật khẩu</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Nhập mật khẩu của bạn để xem</Form.Label>
+            <Form.Control
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Mật khẩu xác nhận..."
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setConfirmModalVisible(false)}>Hủy</Button>
+          <Button variant="primary" onClick={handleConfirmPassword}>Xác nhận</Button>
+        </Modal.Footer>
+      </Modal>
+
     </div>
   );
 }

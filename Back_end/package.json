@@ -8,7 +8,8 @@
     "jsonwebtoken": "^9.0.2",
     "mssql": "^11.0.1",
     "path": "^0.12.7",
-    "pdfkit": "^0.16.0"
+    "pdfkit": "^0.16.0",
+    "uuid": "^11.1.0"
   },
   "name": "back_end",
   "version": "1.0.0",

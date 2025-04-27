@@ -35,11 +35,19 @@
 }
 
 .sidebar-open {
-  transform: translateX(0); /* Fully visible */
+   transform: translateX(0);/* Fully visible */
+  left: 0;
+  opacity: 1;
 }
 
 .sidebar-closed {
-  transform: translateX(-100%); /* Hidden off-screen */
+   transform: translateX(-100%);/* Hidden off-screen */
+  left: -100%;
+  opacity: 0;
+}
+
+.sidebar-transition {
+  transition: all 0.3s ease;
 }
 
 /* Sidebar toggle button */

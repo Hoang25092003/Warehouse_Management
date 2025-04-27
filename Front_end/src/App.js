@@ -4,15 +4,23 @@ import Home from "./pages/Home";
 import Layout from "./components/Layout";
 import Import from "./pages/Import";
 import Reports from "./pages/Reports";
+import Check from "./pages/Check";
+import CreateReport from "./pages/create_report";
+import HistoryReport from "./pages/history_report";
+import Category from "./pages/Category"
 import Products from "./pages/Products";
 import Exports from "./pages/Exports";
 import Supplier from "./pages/Suppliers";
 import Warehouse from "./pages/Warehouse";
 import Account from "./pages/Account";
 import LogIn from "./pages/LogIn";
-import DisplayProducts from "./pages/displayProducts";
+import Profile from "./pages/Profile";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ImportProvider } from "./contexts/ImportContext";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import 'bootstrap/dist/css/bootstrap.min.css';
+
 
 
 function App() {
@@ -28,7 +36,7 @@ function App() {
           <Route
             path="/"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 {/* <Layout><Home /></Layout> */}
                 <Layout><Home /></Layout>
               </ProtectedRoute>
@@ -45,16 +53,24 @@ function App() {
           <Route
             path="/import"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Layout><Import /></Layout>
               </ProtectedRoute>
             }
           />
           <Route
-            path="/exports"
+            path="/export"
             element={
-              <ProtectedRoute allowedRoles={["admin"]}>
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Layout><Exports /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/check"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Layout><Check /></Layout>
               </ProtectedRoute>
             }
           />
@@ -63,6 +79,30 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin", "staff"]}>
                 <Layout><Reports /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create_report"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Layout><CreateReport /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history_report"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Layout><HistoryReport /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute allowedRoles={["admin", "staff"]}>
+                <Layout><Profile /></Layout>
               </ProtectedRoute>
             }
           />
@@ -91,14 +131,15 @@ function App() {
             }
           />
           <Route
-            path="/displayProducts"
+            path="/category"
             element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Layout><DisplayProducts /></Layout>
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Layout><Category /></Layout>
               </ProtectedRoute>
             }
           />
         </Routes>
+        <ToastContainer/>
       </ImportProvider>
     </Router>
   );

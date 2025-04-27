@@ -7,8 +7,10 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   if (token) {
     try {
+
       const payload = token.split('.')[1];
-      const decodedPayload = atob(payload);
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/'); // sửa lỗi định dạng base64url
+      const decodedPayload = atob(base64);
       user = JSON.parse(decodedPayload);
     } catch (error) {
       console.error("Lỗi giải mã token:", error);
@@ -19,16 +21,6 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   // Chưa đăng nhập
   if (!user) {
     return <Navigate to="/login" replace />;
-  }
-
-  // Kiểm tra role nếu có yêu cầu
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    // Nếu là staff thì chuyển về displayProducts
-    if (user.role === 'staff') {
-      return <Navigate to="/displayProducts" replace />;
-    }
-    // Admin thì về trang chủ
-    return <Navigate to="/" replace />;
   }
 
   return children;

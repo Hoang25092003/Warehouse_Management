@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Table, Spinner, Alert, Form, Button } from "react-bootstrap";
+import { Table, Spinner, Alert, Form, Button, Row, Col, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSort,
-  faSortUp,
-  faSortDown,
-  faSearch,
-  faEdit,
-  faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import {faSort, faSortUp, faSortDown, faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
+import { toast } from 'react-toastify';
 
 function Products() {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
@@ -17,11 +11,19 @@ function Products() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingProductId, setEditingProductId] = useState(null);
+  const [editedProduct, setEditedProduct] = useState({});
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get("http://localhost:3000/api/products");
+        const token = localStorage.getItem('token');
+        const response = await axios.get("http://localhost:3000/api/products", {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         setProducts(response.data);
       } catch (err) {
         setError(err.message);
@@ -47,36 +49,60 @@ function Products() {
   };
 
   const handleEdit = (product) => {
-    alert(`Sửa sản phẩm: ${product.name}`);
-    // Add your edit logic here
+    setEditingProductId(product.product_id);
+    setEditedProduct({ ...product });
+    setShowModal(true);
   };
 
-  const handleDelete = (product) => {
+  const handleDelete = async (product, res) => {
+    console.log(`Xóa sản phẩm ID: ${product.product_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm: ${product.name}?`)) {
-      alert(`Xóa sản phẩm: ${product.name}`);
-      // Add your delete logic here
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`http://localhost:3000/api/products/${product.product_id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        // Cập nhật lại danh sách sản phẩm sau khi xóa
+        setProducts((prev) => prev.filter(p => p.product_id !== product.product_id));
+        toast.success("Xóa sản phẩm thành công!");
+      } catch (err) {
+        console.error('❌ Chi tiết lỗi khi xóa sản phẩm:', err);
+        res.status(500).json({ message: 'Lỗi server khi xóa sản phẩm.' });
+        toast.error("Lỗi khi xóa sản phẩm!");
+      }
     }
   };
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSaveEdit = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.put(`http://localhost:3000/api/products/${editingProductId}`, editedProduct, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    if (!sortConfig.key) return 0;
+      // Cập nhật danh sách sản phẩm
+      const updatedProducts = products.map((product) =>
+        product.product_id === editingProductId ? { ...product, ...editedProduct } : product
+      );
 
-    const valueA = a[sortConfig.key];
-    const valueB = b[sortConfig.key];
+      setProducts(updatedProducts);
+      setEditingProductId(null);
+      setEditedProduct({});
+      toast.success("Cập nhật sản phẩm thành công!");
+    } catch (error) {
+      toast.error("Lỗi khi cập nhật sản phẩm!");
+      console.error(error);
+    }
+  };
 
-    if (valueA == null || valueB == null) return 0;
-
-    const valA = typeof valueA === "string" ? valueA.toLowerCase() : valueA;
-    const valB = typeof valueB === "string" ? valueB.toLowerCase() : valueB;
-
-    if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-    if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-    return 0;
-  });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditedProduct((prev) => ({ ...prev, [name]: value }));
+  };
 
   if (loading) {
     return (
@@ -103,21 +129,18 @@ function Products() {
         <Form.Group controlId="searchBar" className="d-flex align-items-center">
           <Form.Control
             type="text"
-            placeholder="Tìm kiếm sản phẩm..."
+            placeholder="Tìm kiếm tên sản phẩm..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{ width: "250px" }}
           />
-          <Button variant="primary" className="ms-2">
-            <FontAwesomeIcon icon={faSearch} />
-          </Button>
         </Form.Group>
       </Form>
       <Table striped bordered hover responsive>
         <thead className="table-dark">
           <tr>
-            <th style={{ cursor: "pointer" }} onClick={() => handleSort("product_id")}>
-              Mã sản phẩm <FontAwesomeIcon icon={getSortIcon("product_id")} />
+            <th style={{ cursor: "pointer" }} onClick={() => handleSort("barcode")}>
+              Mã vạch <FontAwesomeIcon icon={getSortIcon("barcode")} />
             </th>
             <th style={{ cursor: "pointer" }} onClick={() => handleSort("name")}>
               Tên sản phẩm <FontAwesomeIcon icon={getSortIcon("name")} />
@@ -140,36 +163,161 @@ function Products() {
             <th style={{ cursor: "pointer" }} onClick={() => handleSort("supplier_name")}>
               Nhà cung cấp <FontAwesomeIcon icon={getSortIcon("supplier_name")} />
             </th>
-            <th style={{ cursor: "pointer" }} onClick={() => handleSort("barcode")}>
-              Mã vạch <FontAwesomeIcon icon={getSortIcon("barcode")} />
-            </th>
             <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
-          {sortedProducts.map((product) => (
-            <tr key={product.product_id}>
-              <td>{product.product_id}</td>
-              <td>{product.name}</td>
-              <td>{product.category_name}</td>
-              <td>{product.quantity}</td>
-              <td>{product.unit_price.toLocaleString("vi-VN")} VND</td>
-              <td>{new Date(product.production_date).toLocaleDateString("vi-VN")}</td>
-              <td>{new Date(product.expiration_date).toLocaleDateString("vi-VN")}</td>
-              <td>{product.supplier_name}</td>
-              <td>{product.barcode}</td>
-              <td className="text-center">
-                <Button variant="warning" size="sm" className="me-2" onClick={() => handleEdit(product)}>
-                  <FontAwesomeIcon icon={faEdit} /> Sửa
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => handleDelete(product)}>
-                  <FontAwesomeIcon icon={faTrash} /> Xóa
-                </Button>
-              </td>
-            </tr>
-          ))}
+          {products
+            .filter((product) =>
+              product.name.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .sort((a, b) => {
+              if (!sortConfig.key) return 0;
+              const valA = typeof a[sortConfig.key] === "string" ? a[sortConfig.key].toLowerCase() : a[sortConfig.key];
+              const valB = typeof b[sortConfig.key] === "string" ? b[sortConfig.key].toLowerCase() : b[sortConfig.key];
+
+              if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+              if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+              return 0;
+            })
+            .map((product) => (
+              <tr key={product.product_id}>
+                <td>{product.barcode}</td>
+                <td>{product.name}</td>
+                <td>{product.category_name}</td>
+                <td>{product.quantity}</td>
+                <td>
+                  {product.unit_price != null
+                    ? product.unit_price.toLocaleString("vi-VN") + " VND"
+                    : ""}
+                </td>
+                <td>
+                  {product.production_date
+                    ? new Date(product.production_date).toLocaleDateString("vi-VN")
+                    : ""}
+                </td>
+                <td>
+                  {product.expiration_date
+                    ? new Date(product.expiration_date).toLocaleDateString("vi-VN")
+                    : ""}
+                </td>
+                <td>{product.supplier_name}</td>
+                <td className="text-center">
+                  <Button
+                    variant="warning"
+                    size="sm"
+                    className="me-2"
+                    onClick={() => handleEdit(product)}
+                  >
+                    <FontAwesomeIcon icon={faEdit} /> Sửa
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDelete(product)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} /> Xóa
+                  </Button>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </Table>
+      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Chỉnh sửa sản phẩm</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Mã vạch</Form.Label>
+                  <Form.Control
+                    name="barcode"
+                    value={editedProduct.barcode || ""}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Tên sản phẩm</Form.Label>
+                  <Form.Control
+                    name="name"
+                    value={editedProduct.name || ""}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Danh mục</Form.Label>
+                  <Form.Control
+                    name="category_name"
+                    value={editedProduct.category_name || ""}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Nhà cung cấp</Form.Label>
+                  <Form.Control
+                    name="supplier_name"
+                    value={editedProduct.supplier_name || ""}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+            <Form.Group className="mb-3">
+              <Form.Label>Giá bán</Form.Label>
+              <Form.Control
+                name="unit_price"
+                type="number"
+                value={editedProduct.unit_price || ""}
+                onChange={handleChange}
+              />
+            </Form.Group>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Ngày sản xuất</Form.Label>
+                  <Form.Control
+                    name="production_date"
+                    type="date"
+                    value={editedProduct.production_date?.split("T")[0] || ""}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Hạn sử dụng</Form.Label>
+                  <Form.Control
+                    name="expiration_date"
+                    type="date"
+                    value={editedProduct.expiration_date?.split("T")[0] || ""}
+                    onChange={handleChange}
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => { setShowModal(false); setEditedProduct({}); }}>
+            Hủy
+          </Button>
+          <Button variant="primary" onClick={() => { handleSaveEdit(); setShowModal(false); }}>
+            Lưu thay đổi
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
     </div>
   );
 }
