@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Button, Form, Card, Tabs, Tab } from "react-bootstrap";
+import { Container, Row, Col, Button, Form, Card, Tabs, Tab, Spinner } from "react-bootstrap";
 import axios from "axios";
 import { toast } from 'react-toastify';
 import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
+    const [loading, setLoading] = useState(true);
     const [isEditingUserInfo, setIsEditingUserInfo] = useState(false);
     const [isEditingAccountInfo, setIsEditingAccountInfo] = useState(false);
+    const [user, setUser] = useState(null);
     const [userInfo, setUserInfo] = useState({
         fullname: "",
         email: "",
@@ -20,21 +22,37 @@ const Profile = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchUserInfor = async () => {
+        const fetchUser = async () => {
             try {
-                const token = localStorage.getItem("token");
-                if (!token) {
-                    throw new Error("Bạn chưa đăng nhập!");
-                }
+                const res = await fetch("http://localhost:3000/api/profile", {
+                    method: "GET",
+                    credentials: "include",
+                });
 
-                const payload = token.split(".")[1];
-                const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-                const decodedPayload = decodeURIComponent(escape(atob(base64)));
-                const userData = JSON.parse(decodedPayload);
-                const response = await axios.get(`http://localhost:3000/api/UserInfo/${userData.user_id}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                if (res.ok) {
+                    const data = await res.json();
+                    setUser(data.user); // sau khi có user, effect thứ 2 sẽ chạy
+                } else {
+                    setUser(null);
+                }
+            } catch (err) {
+                console.error("Không thể lấy thông tin người dùng:", err);
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchUser();
+    }, []);
+
+    useEffect(() => {
+        if (!user || !user.user_id) return;
+
+        const fetchUserInfo = async () => {
+            try {
+                const response = await axios.get(`http://localhost:3000/api/UserInfo/${user.user_id}`, {
+                    withCredentials: true,
                 });
 
                 const infor = response.data[0];
@@ -51,15 +69,17 @@ const Profile = () => {
             } catch (error) {
                 console.error("Lỗi khi lấy thông tin người dùng:", error);
                 if (error.response?.status === 401) {
-                    alert("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại!");
-                    localStorage.removeItem("token");
+                    toast.warn("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại!");
                     navigate("/login");
                 }
+            }finally {
+                setLoading(false);
             }
         };
 
-        fetchUserInfor();
-    }, []);
+        fetchUserInfo();
+    }, [user]);
+
 
 
     const handleInputChange = (e, type) => {
@@ -73,18 +93,11 @@ const Profile = () => {
 
     const handleSaveUserInfo = async () => {
         try {
-            const token = localStorage.getItem("token");
-            if (!token) {
-                throw new Error("Bạn chưa đăng nhập!");
-            }
-
             const response = await axios.put(
                 `http://localhost:3000/api/UserInfo`,
                 { ...userInfo },
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    withCredentials: true,
                 }
             );
 
@@ -105,11 +118,6 @@ const Profile = () => {
                 return;
             }
 
-            const token = localStorage.getItem("token");
-            if (!token) {
-                throw new Error("Bạn chưa đăng nhập!");
-            }
-
             const response = await axios.put(
                 `http://localhost:3000/api/AccountInfo`,
                 {
@@ -117,9 +125,7 @@ const Profile = () => {
                     password: accountInfo.password,
                 },
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    withCredentials: true,
                 }
             );
 
@@ -133,6 +139,15 @@ const Profile = () => {
         }
     };
 
+    if (loading) {
+        return (
+            <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+                <Spinner animation="border" role="status">
+                    <span className="visually-hidden">Loading...</span>
+                </Spinner>
+            </div>
+        );
+    }
 
     return (
         <Container className="mt-5">

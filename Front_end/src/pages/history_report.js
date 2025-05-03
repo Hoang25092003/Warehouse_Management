@@ -1,25 +1,37 @@
 import React, { useEffect, useState } from "react";
-import { Table } from "react-bootstrap";
+import { Table, Spinner } from "react-bootstrap";
 import axios from "axios";
 
 function HistoryReport() {
+    const [loading, setLoading] = useState(true);
     const [savedReports, setSavedReports] = useState([]);
 
     const fetchSavedReports = async () => {
         try {
-            const token = localStorage.getItem("token");
             const response = await axios.get("http://localhost:3000/api/savedreports", {
-                headers: { Authorization: `Bearer ${token}` },
+                withCredentials: true,
             });
             setSavedReports(response.data);
         } catch (err) {
             console.error("Lỗi khi lấy lịch sử báo cáo:", err);
-        }
+        }finally {
+            setLoading(false);
+          }
     };
 
     useEffect(() => {
         fetchSavedReports();
     }, []);
+
+    if (loading) {
+        return (
+          <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+            <Spinner animation="border" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </Spinner>
+          </div>
+        );
+      }
 
     return (
         <div className="container mt-4">

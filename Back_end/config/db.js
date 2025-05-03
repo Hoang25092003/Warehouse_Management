@@ -6,7 +6,7 @@ const dbConfig = {
   server: '100.119.167.61',
   database: 'WarehouseManagement',
   options: {
-    encrypt: false,
+    encrypt: true,
     trustServerCertificate: true,
     enableArithAbort: true
   }

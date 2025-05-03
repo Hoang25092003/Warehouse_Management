@@ -1,45 +1,75 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Navbar, Button, Nav, Collapse, Dropdown } from "react-bootstrap";
+import { Container, Row, Col, Navbar, Button, Nav, Collapse, Dropdown, Spinner } from "react-bootstrap";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBars, faUser, faSignOutAlt, faChevronDown, faChevronUp, faChevronLeft, faUserEdit } from "@fortawesome/free-solid-svg-icons";
 
 const Layout = ({ children }) => {
+  const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [showReportSubmenu, setShowReportSubmenu] = useState(false);
   const [showReportSubmenu1, setShowReportSubmenu1] = useState(false);
+  const [showReportSubmenu2, setShowReportSubmenu2] = useState(false);
   const [user, setUser] = useState(null); // State to store logged-in user
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) {
+    // Gọi API để lấy thông tin người dùng từ cookie
+    const fetchUser = async () => {
       try {
-        // Check if user is logged in (simulate with localStorage)
-        const payload = token.split('.')[1];
-        const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const decodedPayload = decodeURIComponent(escape(atob(base64)));
-        const userData = JSON.parse(decodedPayload);
-        setUser(userData);
+        const res = await fetch("http://localhost:3000/api/profile", {
+          method: "GET",
+          credentials: "include", // Quan trọng để gửi cookie
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+          navigate("/login");
+        }
       } catch (err) {
-        console.error("Token không hợp lệ:", err);
-        localStorage.removeItem("token");
+        console.error("Không thể lấy thông tin người dùng:", err);
         setUser(null);
+        navigate("/login");
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
+    };
+
+    fetchUser();
+  }, [navigate]);
 
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setSidebarOpen(false);
   const toggleReportSubmenu = () => setShowReportSubmenu(!showReportSubmenu);
   const toggleReportSubmenu1 = () => setShowReportSubmenu1(!showReportSubmenu1);
+  const toggleReportSubmenu2 = () => setShowReportSubmenu2(!showReportSubmenu2);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await fetch('http://localhost:3000/api/logout', {
+        method: 'POST',
+        credentials: 'include', // Quan trọng để gửi cookie
+      });
+
+      setUser(null); // Xóa state user hiện tại
+      navigate("/login"); // Quay về trang login
+    } catch (err) {
+      console.error("Lỗi khi logout:", err);
+    }
   };
-  // Check if user is logged in  
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -132,6 +162,20 @@ const Layout = ({ children }) => {
                   <Nav.Link className="text-white" as={NavLink} to="/category" onClick={closeSidebar}>
                     🗂️ Quản lý danh mục
                   </Nav.Link>
+                  <Nav.Link className="text-white" onClick={toggleReportSubmenu2}>
+                    🛠️ Quản lý thiết bị{" "}
+                    <FontAwesomeIcon icon={showReportSubmenu2 ? faChevronUp : faChevronDown} className="float-end" />
+                  </Nav.Link>
+                  <Collapse in={showReportSubmenu2}>
+                    <div className="ms-3">
+                      <Nav.Link className="text-white" as={NavLink} to="/devices" onClick={closeSidebar}>
+                        ℹ️ Thông tin thiết bị
+                      </Nav.Link>
+                      <Nav.Link className="text-white" as={NavLink} to="/deviceAuth" onClick={closeSidebar}>
+                        🔐 Phân quyền thiết bị
+                      </Nav.Link>
+                    </div>
+                  </Collapse>
                 </>
               )}
               <Nav.Link className="text-white" onClick={toggleReportSubmenu}>

@@ -2,9 +2,18 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
+const { authenticateToken } = require('../middleware/auth');
+const crypto = require('crypto');
+const SECRET_KEY = "WarehouseManagermentIoT"
+const AUTH_TOKEN = "TokenIoTVMU"
+
+// Hàm kiểm tra chữ ký
+function createSignature(barcode, device_id, device_type) {
+    return crypto.createHash("sha1").update(`${barcode}${device_id}${device_type}${SECRET_KEY}`).digest("hex");
+}
 
 // Lấy danh sách danh mục
-router.get('/categories', async (req, res) => {
+router.get('/categories', authenticateToken, async (req, res) => {
     try {
         const pool = getPool();
         const result = await pool.request().query('SELECT * FROM Category');
@@ -15,7 +24,7 @@ router.get('/categories', async (req, res) => {
     }
 });
 // Lấy danh sách nhà cung cấp
-router.get('/suppliers', async (req, res) => {
+router.get('/suppliers', authenticateToken, async (req, res) => {
     try {
         const pool = getPool();
         const result = await pool.request().query('SELECT * FROM Supplier');
@@ -26,7 +35,7 @@ router.get('/suppliers', async (req, res) => {
     }
 });
 // Lấy danh sách nhà kho
-router.get('/warehouses', async (req, res) => {
+router.get('/warehouses', authenticateToken, async (req, res) => {
     try {
         const pool = getPool();
         const result = await pool.request().query('SELECT * FROM Warehouse');
@@ -38,7 +47,7 @@ router.get('/warehouses', async (req, res) => {
 });
 
 // Tìm kiếm sản phẩm
-router.get("/search_products", async (req, res) => {
+router.get("/search_products", authenticateToken, async (req, res) => {
     const { query } = req.query;
     try {
         const pool = getPool();
@@ -55,16 +64,60 @@ router.get("/search_products", async (req, res) => {
 let cachedBarcode = null;
 // Nhận mã vạch từ ESP8266 và kiểm tra sản phẩm trong cơ sở dữ liệu
 router.post("/barcode_import", async (req, res) => {
-    const { barcode } = req.body;
+    const { barcode, device_id, userid } = req.body;
+    const token = req.headers.authorization;
+    const signature = req.headers["x-signature"];
+    const device_type = "import";
 
+    // Kiểm tra token
+    if (!token || token !== `Bearer ${AUTH_TOKEN}`) {
+        return res.status(401).json({ message: "Unauthorized token" });
+    }
+
+    // Kiểm tra thông tin
     if (!barcode) {
-        console.error("Barcode is missing in the request body.");
+        console.log("Barcode is missing in the request body.");
         return res.status(400).json({ message: "Barcode is required" });
     }
 
+    if (!device_id) {
+        console.log("device ID is missing in the request body.");
+        return res.status(400).json({ message: "device ID is required" });
+    }
+
+    if (!userid) {
+        console.log("userid is missing in the request body.");
+        return res.status(400).json({ message: "userid is required" });
+    }
+
+    // Kiểm tra chữ ký
+    const expectedSignature = createSignature(barcode, device_id, device_type);
+    if (signature !== expectedSignature) {
+        return res.status(403).json({ message: "Invalid signature" });
+    }
+
+
     try {
-        console.log(`Received barcode: ${barcode}`);
-        cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
+        console.log(`Received import barcode: ${barcode} - Device_id: ${device_id}`);
+        try {
+            const res = await fetch("http://localhost:3000/api/profile", {
+                method: "GET",
+                credentials: "include", // Quan trọng để gửi cookie
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const user = data.user;
+            }
+        } catch (err) {
+            console.error("Không thể lấy thông tin người dùng:", err);
+        }
+
+        const check_auth = userid.find(use.user_id);
+        if (check_auth) {
+            cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
+        }
+
         res.status(200).json({ message: "Barcode received successfully." });
     } catch (error) {
         console.error("Error processing barcode:", error);
@@ -73,7 +126,7 @@ router.post("/barcode_import", async (req, res) => {
 });
 
 // API lấy mã vạch từ cache (được ứng dụng web gọi)
-router.get("/barcode_fetch", async (req, res) => {
+router.get("/barcode_fetch", authenticateToken, async (req, res) => {
     try {
         if (cachedBarcode) {
             const result = cachedBarcode;
@@ -112,7 +165,7 @@ router.get("/barcode_fetch", async (req, res) => {
 });
 
 // Thêm sản phẩm mới vào cơ sở dữ liệu
-router.post("/save_new_product", async (req, res) => {
+router.post("/save_new_product", authenticateToken, async (req, res) => {
     const { product_id, barcode, name, category_id, quantity, unit_price, production_date, expiration_date, supplier_id } = req.body;
 
     if (!barcode || !name) {
@@ -168,7 +221,7 @@ const generateImportDetailId = () => {
 };
 
 // Xác nhận nhập hàng
-router.post("/imports_confirm", async (req, res) => {
+router.post("/imports_confirm", authenticateToken, async (req, res) => {
     const { contents, products } = req.body;
 
     if (!contents || !products) {

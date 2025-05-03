@@ -2,8 +2,10 @@ const jwt = require('jsonwebtoken');
 const SECRET_KEY = 'SP_GV.DT25-47';
 
 function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+  // const authHeader = req.headers['authorization'];
+  // const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>
+  
+  const token = req.cookies.token; // Lấy từ cookie
 
   if (!token) return res.sendStatus(401);
 

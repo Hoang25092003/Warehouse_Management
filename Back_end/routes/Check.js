@@ -1,20 +1,66 @@
 const express = require('express');
 const router = express.Router();
 const { getPool } = require('../config/db');
+const { authenticateToken } = require('../middleware/auth');
+const SECRET_KEY = "WarehouseManagermentIoT"
+const AUTH_TOKEN = "TokenIoTVMU"
+
+// Hàm kiểm tra chữ ký
+function createSignature(barcode, device_id, device_type) {
+    return crypto.createHash("sha1").update(`${barcode}${device_id}${device_type}${SECRET_KEY}`).digest("hex");
+}
 
 let cachedBarcode = null;
 // Nhận mã vạch từ ESP8266 và kiểm tra sản phẩm trong cơ sở dữ liệu
 router.post("/barcode_check", async (req, res) => {
-    const { barcode } = req.body;
+    const { barcode, device_id } = req.body;
+    const token = req.headers.authorization;
+    const signature = req.headers["x-signature"];
+    const device_type = "check";
 
+    // Kiểm tra token
+    if (!token || token !== `Bearer ${AUTH_TOKEN}`) {
+        return res.status(401).json({ message: "Unauthorized token" });
+    }
+
+    // Kiểm tra thông tin
     if (!barcode) {
         console.error("Barcode is missing in the request body.");
         return res.status(400).json({ message: "Barcode is required" });
     }
 
+    if (!device_id) {
+        console.log("device ID is missing in the request body.");
+        return res.status(400).json({ message: "device ID is required" });
+    }
+    // Kiểm tra chữ ký
+    const expectedSignature = createSignature(barcode, device_id, device_type);
+    if (signature !== expectedSignature) {
+        return res.status(403).json({ message: "Invalid signature" });
+    }
+
     try {
-        console.log(`Received barcode: ${barcode}`);
-        cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
+        console.log(`Received check barcode: ${barcode} - Device_id: ${device_id}`);
+
+        try {
+            const res = await fetch("http://localhost:3000/api/profile", {
+                method: "GET",
+                credentials: "include", // Quan trọng để gửi cookie
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                const user = data.user;
+            }
+        } catch (err) {
+            console.error("Không thể lấy thông tin người dùng:", err);
+        }
+
+        const check_auth = userid.find(use.user_id);
+        if (check_auth) {
+            cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
+        }
+
         res.status(200).json({ message: "Barcode received successfully." });
     } catch (error) {
         console.error("Error processing barcode:", error);
@@ -23,7 +69,7 @@ router.post("/barcode_check", async (req, res) => {
 });
 
 // API lấy mã vạch từ cache (được ứng dụng web gọi)
-router.get("/check_barcode_fetch", async (req, res) => {
+router.get("/check_barcode_fetch", authenticateToken, async (req, res) => {
     try {
         if (cachedBarcode) {
             const result = cachedBarcode;

@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { getPool } = require('../config/db');
-
+const { authenticateToken } = require('../middleware/auth');
 ////////////////////////////////////////////////////TẠO BÁO CÁO////////////////////////////////////////////////////////
 // Báo cáo nhập hàng
-router.get('/reports/imports', async (req, res) => {
+router.get('/reports/imports', authenticateToken, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
@@ -26,7 +26,7 @@ router.get('/reports/imports', async (req, res) => {
 });
 
 // Báo cáo xuất hàng
-router.get('/reports/exports', async (req, res) => {
+router.get('/reports/exports', authenticateToken, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
@@ -48,7 +48,7 @@ router.get('/reports/exports', async (req, res) => {
 });
 
 // Báo cáo tồn kho
-router.get('/reports/inventory', async (req, res) => {
+router.get('/reports/inventory', authenticateToken, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
@@ -76,7 +76,7 @@ router.get('/reports/inventory', async (req, res) => {
 });
 ////////////////////////////////////////////////////TẢI BÁO CÁO////////////////////////////////////////////////////////
 // Lấy danh sách báo cáo đã lưu
-router.get('/savedreports', async (req, res) => {
+router.get('/savedreports', authenticateToken, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
@@ -93,7 +93,7 @@ router.get('/savedreports', async (req, res) => {
 });
 
 // Lưu báo cáo mới
-router.post('/reports', async (req, res) => {
+router.post('/reports', authenticateToken, async (req, res) => {
   try {
     const { report_type, user_id, content } = req.body;
     const report_id = 'REP-' + Date.now().toString().slice(-6);
@@ -117,7 +117,7 @@ router.post('/reports', async (req, res) => {
 });
 
 // Báo cáo chi tiết nhập hàng
-router.post('/import_detail/:id', async (req, res) => {
+router.post('/import_detail/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     console.log("ID chi tiết báo cáo nhập hàng: ", id);
@@ -166,7 +166,7 @@ router.post('/import_detail/:id', async (req, res) => {
 });
 
 // Báo cáo chi tiết xuất hàng
-router.post('/export_detail/:id', async (req, res) => {
+router.post('/export_detail/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     console.log("ID chi tiết báo cáo xuất hàng: ", id);

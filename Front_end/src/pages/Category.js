@@ -22,11 +22,8 @@ function Category() {
 
     const fetchcategories = async () => {
         try {
-            const token = localStorage.getItem('token');
             const response = await axios.get('http://localhost:3000/api/categories', {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                withCredentials: true,
             });
             setCategories(response.data);
         } catch (err) {
@@ -67,15 +64,13 @@ function Category() {
         console.log(`Xóa danh mục ID: ${category.warehouse_id}`);
         if (window.confirm(`Bạn có chắc chắn muốn xóa danh mục: ${category.category_name}?`)) {
             try {
-                const token = localStorage.getItem('token');
                 await axios.delete(`http://localhost:3000/api/categories/${category.category_id}`, {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    withCredentials: true,
                 });
                 // Cập nhật lại danh sách danh mục sau khi xóa
                 setCategories((prev) => prev.filter(c => c.category_id !== category.category_id));
                 toast.success("Đã xóa danh mục thành công!");
+                fetchcategories();
             } catch (err) {
                 console.error('❌ Chi tiết lỗi khi danh mục:', err);
                 toast.error("Đã xảy ra lỗi khi xóa danh mục!");
@@ -93,20 +88,20 @@ function Category() {
 
     const handleAddCategory = async () => {
         try {
-            const token = localStorage.getItem('token');
-
             if (!formCategory.category_name || formCategory.category_name.trim() === "") {
                 toast.error("Tên danh mục không được để trống!");
                 return;
             }
+            if (formCategory.description.trim() === "") {
+                formCategory.description = formCategory.category_name;
+            }
             const newCategory = { ...formCategory };
             const response = await axios.post("http://localhost:3000/api/categories", newCategory, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
+                withCredentials: true,
             });
             setCategories(prev => [...prev, response.data.category]);
             handleClose();
+            fetchcategories();
             toast.success(response.data.message);
         } catch (err) {
             if (err.response && err.response.data && err.response.data.message) {
@@ -126,13 +121,10 @@ function Category() {
                 description: formCategory.description
             };
 
-            const token = localStorage.getItem('token');
             const response = await axios.put(
                 `http://localhost:3000/api/categories/${editingCategoryId}`, updatedCategory,
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`
-                    }
+                    withCredentials: true,
                 }
             );
 
@@ -143,6 +135,7 @@ function Category() {
             );
 
             handleClose(); // Reset lại modal và form
+            fetchcategories();
             toast.success("Đã cập nhật danh mục thành công!");
         } catch (err) {
             console.error("❌ Lỗi khi cập nhật danh mục:", err);
@@ -267,6 +260,7 @@ function Category() {
                                 <Form.Control
                                     type="text"
                                     name="category_name"
+                                    placeholder="Nhập tên danh mục sản phẩm"
                                     value={formCategory.category_name}
                                     onChange={(e) => setFormCategory({ ...formCategory, category_name: e.target.value })}
                                 />
@@ -278,20 +272,15 @@ function Category() {
                                 <Form.Control
                                     as="textarea"
                                     rows={3}
-                                    placeholder={
-                                        formCategory.description.trim() === ""
-                                            ? formCategory.category_name || "Mô tả danh mục..."
-                                            : "Mô tả danh mục..."
-                                    }
                                     className="mb-3"
                                     name="description"
-                                    value={formCategory.description}
-                                    onChange={(e) =>
-                                        setFormCategory({
-                                            ...formCategory, description: formCategory.description.trim() === ""
-                                                ? formCategory.category_name : formCategory.description
-                                        })
+                                    placeholder={
+                                        formCategory.description.trim() === ""
+                                            ? formCategory.category_name.trim() === "" ? "Mô tả danh mục..." : formCategory.category_name
+                                            : "Mô tả danh mục..."
                                     }
+                                    value={formCategory.description}
+                                    onChange={(e) => setFormCategory({ ...formCategory, description: e.target.value })}
                                 />
                             </Form.Group>
                         </Row>

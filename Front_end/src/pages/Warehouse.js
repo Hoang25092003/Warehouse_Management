@@ -24,11 +24,8 @@ function Warehouse() {
 
   const fetchWarehouses = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.get('http://localhost:3000/api/warehouses', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        withCredentials: true,
       });
       setWarehouses(response.data);
     } catch (err) {
@@ -101,14 +98,12 @@ function Warehouse() {
     console.log(`Xóa kho hàng ID: ${warehouse.warehouse_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa kho hàng: ${warehouse.name}?`)) {
       try {
-        const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:3000/api/warehouses/${warehouse.warehouse_id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         });
         // Cập nhật lại danh sách kho hàng sau khi xóa
         setWarehouses((prev) => prev.filter(p => p.warehouse_id !== warehouse.warehouse_id));
+        fetchWarehouses();
         toast.success("Đã xóa kho hàng thành công!");
       } catch (err) {
         console.error('❌ Chi tiết lỗi khi xóa kho hàng:', err);
@@ -127,15 +122,13 @@ function Warehouse() {
 
   const handleAddWarehouse = async () => {
     try {
-      const token = localStorage.getItem('token');
       const newWarehouse = { ...formWarehouse, current_capacity: 0 }; // Mặc định là 0
       const response = await axios.post("http://localhost:3000/api/warehouses", newWarehouse, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        withCredentials: true,
       });
       setWarehouses(prev => [...prev, response.data]);
       handleClose();
+      fetchWarehouses();
       toast.success("Đã thêm kho hàng thành công!");
     } catch (err) {
       toast.error("Lỗi khi thêm kho hàng mới!");
@@ -153,13 +146,10 @@ function Warehouse() {
         status: formWarehouse.status
       };
 
-      const token = localStorage.getItem('token');
       const response = await axios.put(
         `http://localhost:3000/api/warehouses/${editingWarehouseId}`, updatedWarehouse,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         }
       );
 
@@ -170,6 +160,7 @@ function Warehouse() {
       );
 
       handleClose(); // Reset lại modal và form
+      fetchWarehouses();
       toast.success("Đã cập nhật kho hàng thành công!");
     } catch (err) {
       console.error("❌ Lỗi khi cập nhật kho hàng:", err);

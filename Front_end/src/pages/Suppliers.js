@@ -24,9 +24,8 @@ function Supplier() {
 
   const fetchSuppliers = async () => {
     try {
-      const token = localStorage.getItem("token");
       const response = await axios.get("http://localhost:3000/api/suppliers", {
-        headers: { Authorization: `Bearer ${token}` },
+        withCredentials: true,
       });
       setSuppliers(response.data);
     } catch (err) {
@@ -36,7 +35,6 @@ function Supplier() {
     }
   };
   useEffect(() => {
-
     fetchSuppliers();
   }, []);
 
@@ -70,14 +68,12 @@ function Supplier() {
     console.log(`Xóa NCC ID: ${supplier.supplier_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa nhà cung cấp: ${supplier.supplier_name}?`)) {
       try {
-        const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:3000/api/suppliers/${supplier.supplier_id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         });
         // Cập nhật lại danh sách nhà cung cấp sau khi xóa
         setSuppliers((prev) => prev.filter(p => p.supplier_id !== supplier.supplier_id));
+        fetchSuppliers();
         toast.success("Đã xóa nhà cung cấp thành công!");
       } catch (err) {
         console.error('❌ Chi tiết lỗi khi xóa nhà cung cấp:', err);
@@ -96,15 +92,13 @@ function Supplier() {
 
   const handleAddSupplier = async () => {
     try {
-      const token = localStorage.getItem('token');
       const newSupplier = { ...formSupplier };
       const response = await axios.post("http://localhost:3000/api/suppliers", newSupplier, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        withCredentials: true,
       });
       setSuppliers(prev => [...prev, response.data]);
       handleClose();
+      fetchSuppliers();
       toast.success("Đã thêm nhà cung cấp thành công!");
     } catch (err) {
       toast.error("Lỗi khi thêm nhà cung cấp mới!");
@@ -123,13 +117,10 @@ function Supplier() {
         address: formSupplier.address
       };
 
-      const token = localStorage.getItem('token');
       const response = await axios.put(
         `http://localhost:3000/api/suppliers/${editingSupplierId}`, updatedSupplier,
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         }
       );
 
@@ -140,6 +131,7 @@ function Supplier() {
       );
 
       handleClose(); // Reset lại modal và form
+      fetchSuppliers();
       toast.success("Đã cập nhật nhà cung cấp thành công!");
     } catch (err) {
       console.error("❌ Lỗi khi cập nhật nhà cung cấp:", err);

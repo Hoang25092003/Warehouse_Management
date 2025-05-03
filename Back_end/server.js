@@ -4,11 +4,26 @@ const path = require('path');
 const cors = require('cors');
 const { connectDB } = require('./config/db');
 const app = express();
+const compression = require('compression');
+const cookieParser = require('cookie-parser');
+
+
+// Cấu hình CORS
+const corsOptions = {
+  origin: 'http://localhost:3001', // Cho phép truy cập từ frontend (localhost:3001)
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true, // Cho phép gửi cookie
+};
 
 // Middleware
-app.use(cors());
+app.use(compression());
+app.use(cors(corsOptions));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(cookieParser()); // Đọc cookie từ request
+
+
+app.use(express.static(path.resolve(__dirname, '../Front_end/build')));
 
 // Kết nối CSDL
 connectDB();
@@ -27,6 +42,7 @@ app.use('/api', require('./routes/Export'));
 app.use('/api', require('./routes/Check'));
 app.use('/api', require('./routes/receive_barcode'));
 app.use('/api', require('./routes/Profile'));
+app.use('/api', require('./routes/DeviceManagerment'));
 
 
 // Xử lý lỗi toàn cục
@@ -34,6 +50,12 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Có lỗi xảy ra trên máy chủ');
 });
+
+// Nếu không match bất kỳ route API nào thì trả về index.html của Frontend
+app.get('*', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../Front_end/build/index.html'));
+});
+
 
 // Khởi động
 const port = 3000;

@@ -29,6 +29,7 @@ const LogIn = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ username, password }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -38,13 +39,10 @@ const LogIn = () => {
       }
 
       const data = await response.json();
-      if (!data || !data.user || !data.token) {
+      if (!data) {
         toast.error('Dữ liệu trả về không hợp lệ');
         return;
       }
-
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
 
       // Ghi nhớ tài khoản nếu có
       if (rememberMe) {

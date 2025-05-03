@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast } from 'react-toastify';
 
 function Account() {
+  const [user, setUser] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [searchTerm, setSearchTerm] = useState("");
   const [accounts, setAccounts] = useState([]);
@@ -29,15 +30,35 @@ function Account() {
 
   useEffect(() => {
     fetchAccounts();
+    fetchUser();
   }, []);
+
+  const fetchUser = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/profile", {
+        method: "GET",
+        credentials: "include", // Quan trọng để gửi cookie
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      } else {
+        setUser(null);
+      }
+    } catch (err) {
+      console.error("Không thể lấy thông tin người dùng:", err);
+      setUser(null);
+    }
+    finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAccounts = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await axios.get('http://localhost:3000/api/users', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        withCredentials: true,
       });
       // Mặc định tất cả password đều ẩn
       const accountsWithHiddenPasswords = response.data.map(account => ({
@@ -85,11 +106,8 @@ function Account() {
     console.log(`Xóa User ID: ${account.user_id}`);
     if (window.confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) {
       try {
-        const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:3000/api/users/${account.user_id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         });
         setAccounts((prevAccounts) => prevAccounts.filter((acc) => acc.user_id !== account.user_id));
         toast.success("Xóa tài khoản thành công");
@@ -115,7 +133,6 @@ function Account() {
 
   const handleAddAccount = async () => {
     try {
-      const token = localStorage.getItem('token');
       const newAccount = { ...formUser };
       if (formUser.password !== passwordConfirm) {
         toast.error("Mật khẩu không khớp!");
@@ -138,9 +155,7 @@ function Account() {
         return;
       }
       const response = await axios.post('http://localhost:3000/api/users', newAccount, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        withCredentials: true,
       });
       setAccounts((prevAccounts) => [...prevAccounts, response.data]);
       handleClose();
@@ -178,11 +193,8 @@ function Account() {
         toast.error("Email không hợp lệ!");
         return;
       }
-      const token = localStorage.getItem('token');
       const response = await axios.put(`http://localhost:3000/api/users/${editingUserId}`, updatedWarehouse, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        withCredentials: true,
       });
       setAccounts((prevAccounts) =>
         prevAccounts.map((account) =>
@@ -219,19 +231,8 @@ function Account() {
   };
 
   const handleConfirmPassword = () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Không tìm thấy token đăng nhập.");
-      return;
-    }
-
     try {
-      const payload = token.split('.')[1];
-      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-      const decodedPayload = JSON.parse(atob(base64));
-      const currentUserId = decodedPayload.user_id;
-
-      const account = accounts.find(acc => acc.user_id === currentUserId);
+      const account = accounts.find(acc => acc.user_id === user.user_id);
 
       if (account && confirmPassword === account.password) {
         const updatedAccounts = accounts.map(acc =>

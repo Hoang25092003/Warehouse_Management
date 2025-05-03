@@ -17,11 +17,8 @@ function Home() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('token');
         const response = await axios.get('http://localhost:3000/api/dashboard', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         });
         setDashboardData(response.data);
       } catch (err) {

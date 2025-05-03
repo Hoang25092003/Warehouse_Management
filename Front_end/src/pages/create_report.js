@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button, Form, Row, Col, Spinner, Alert, Modal } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFileExcel } from "@fortawesome/free-solid-svg-icons";
@@ -6,6 +6,7 @@ import * as XLSX from "xlsx";
 import axios from "axios";
 
 function CreateReport() {
+  const [user, setUser] = useState(null);
   const [reportType, setReportType] = useState("");
   const [DetailReportType, setDetailReportType] = useState("");
   const [reportData, setReportData] = useState(null);
@@ -16,7 +17,31 @@ function CreateReport() {
   const [showReport, setShowReport] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("http://localhost:3000/api/profile", {
+          method: "GET",
+          credentials: "include", // Quan trọng để gửi cookie
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Không thể lấy thông tin người dùng:", err);
+        setUser(null);
+      }finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const generateReport = async () => {
     if (!reportType) {
@@ -46,7 +71,7 @@ function CreateReport() {
       }
 
       const response = await axios.get(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
+        withCredentials: true,
       });
 
       console.log("Dữ liệu báo cáo: ", response.data)
@@ -69,9 +94,7 @@ function CreateReport() {
         const importReportResponse = await axios.post(
           `http://localhost:3000/api/import_detail/${report_id}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            withCredentials: true,
           }
         );
         console.log("Dữ liệu chi tiết nhập hàng: ", importReportResponse.data)
@@ -86,9 +109,7 @@ function CreateReport() {
         const exportReportResponse = await axios.post(
           `http://localhost:3000/api/export_detail/${report_id}`,
           {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+            withCredentials: true,
           }
         );
         console.log("Dữ liệu chi tiết xuất hàng: ", exportReportResponse.data)
@@ -102,11 +123,6 @@ function CreateReport() {
   };
 
   const exportToExcel = async () => {
-
-    const payload = token.split('.')[1];
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const decodedPayload = decodeURIComponent(escape(atob(base64)));
-    const userData = JSON.parse(decodedPayload);
 
     const now = new Date();
     let contentReportType = ""
@@ -127,10 +143,10 @@ function CreateReport() {
 
     await axios.post('http://localhost:3000/api/reports', {
       report_type: reportType,
-      user_id: userData.user_id,
+      user_id: user.user_id,
       content: reportContent
     }, {
-      headers: { Authorization: `Bearer ${token}` }
+      withCredentials: true,
     });
 
     if (!reportData) return;
@@ -281,6 +297,17 @@ function CreateReport() {
       XLSX.writeFile(workbook, fileName);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="container mt-4">

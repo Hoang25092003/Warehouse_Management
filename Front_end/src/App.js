@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Layout from "./components/Layout";
 import Import from "./pages/Import";
-import Reports from "./pages/Reports";
 import Check from "./pages/Check";
 import CreateReport from "./pages/create_report";
 import HistoryReport from "./pages/history_report";
@@ -15,6 +14,8 @@ import Warehouse from "./pages/Warehouse";
 import Account from "./pages/Account";
 import LogIn from "./pages/LogIn";
 import Profile from "./pages/Profile";
+import Devices from "./pages/Devices";
+import DeviceAuthorization from "./pages/DeviceAuthorization";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { ImportProvider } from "./contexts/ImportContext";
 import { ToastContainer } from 'react-toastify';
@@ -75,14 +76,6 @@ function App() {
             }
           />
           <Route
-            path="/reports"
-            element={
-              <ProtectedRoute allowedRoles={["admin", "staff"]}>
-                <Layout><Reports /></Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/create_report"
             element={
               <ProtectedRoute allowedRoles={["admin", "staff"]}>
@@ -135,6 +128,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <Layout><Category /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/devices"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Layout><Devices /></Layout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/deviceAuth"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <Layout><DeviceAuthorization /></Layout>
               </ProtectedRoute>
             }
           />

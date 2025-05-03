@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Card, Row, Col } from "react-bootstrap";
-import { ToastContainer, toast } from "react-toastify";
+import { Modal, Button, Form, Card, Row, Col, Spinner } from "react-bootstrap";
+import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle, faPlus, faSearch, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faPlus, faSearch, faTrash, faBars, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 
 function Import() {
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [categories, setCategories] = useState([]);
@@ -19,9 +20,8 @@ function Import() {
   const [user, setUser] = useState(null);
   const [import_warehouses, setImportWarehouses] = useState([]);
   const [import_notes, setImportNotes] = useState([]);
-  const headers = {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  };
+  const [queueBarcode, setQueueBarcode] = useState([]);
+  const [showQueue, setShowQueue] = useState(false);
   const [formProduct, setFormProduct] = useState({
     barcode: "",
     name: "",
@@ -31,52 +31,71 @@ function Import() {
     production_date: "",
     expiration_date: "",
     quantity: 1,
+    newProduct: false,
   });
 
   useEffect(() => {
     // Gọi API để lấy danh sách nhà kho, nhà cung cấp, danh mục từ CSDL để hiển thị ở các selectbox
     const fetchDataSelectBox = async () => {
       try {
-        const categoriesRes = await axios.get("http://localhost:3000/api/categories", { headers });
-        const suppliersRes = await axios.get("http://localhost:3000/api/suppliers", { headers });
-        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", { headers });
+        const categoriesRes = await axios.get("http://localhost:3000/api/categories", {
+          withCredentials: true,
+        });
+        const suppliersRes = await axios.get("http://localhost:3000/api/suppliers", {
+          withCredentials: true,
+        });
+        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", {
+          withCredentials: true,
+        });
 
         setCategories(categoriesRes.data);
         setSuppliers(suppliersRes.data);
         setWarehouses(warehousesRes.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu từ server!");
+      }finally {
+        setLoading(false);
       }
     };
     fetchDataSelectBox();
 
-    const token = localStorage.getItem("token");
-    if (token) {
+    const fetchUser = async () => {
       try {
-        const payload = token.split(".")[1];
-        const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-        const decodedPayload = decodeURIComponent(
-          escape(window.atob(base64))
-        );
-        const userData = JSON.parse(decodedPayload);
-        setUser(userData);
-      } catch (error) {
-        console.error("Lỗi khi giải mã token:", error);
+        const res = await fetch("http://localhost:3000/api/profile", {
+          method: "GET",
+          credentials: "include", // Quan trọng để gửi cookie
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Không thể lấy thông tin người dùng:", err);
+        setUser(null);
+      }finally {
+        setLoading(false);
       }
-    }
+    };
+
+    fetchUser();
 
     let intervalId;
     const startListening = () => {
       intervalId = setInterval(async () => {
         try {
           // Gửi yêu cầu đến API để quét mã vạch
-          const response = await axios.get("http://localhost:3000/api/barcode_fetch");
+          const response = await axios.get("http://localhost:3000/api/barcode_fetch", {
+            withCredentials: true,
+          });
 
           // Kiểm tra dữ liệu từ API
-          if (response.data.success) {
+          if (response.data && response.data.success) {
             // Reset formProduct về giá trị mặc định
             setFormProduct({
-              barcode: "",
+              // barcode: "",
               name: "",
               category_id: "",
               unit_price: "",
@@ -89,8 +108,7 @@ function Import() {
             if (response.data.find) {
               const received_product = response.data.product;
               console.log("Sản phẩm tìm được", received_product); // Kiểm tra mã vạch nhận được từ API
-              // Cập nhật thông tin sản phẩm vào form
-              setFormProduct({
+              const productData = {
                 barcode: received_product.barcode,
                 name: received_product.name,
                 category_id: received_product.category_id,
@@ -99,20 +117,56 @@ function Import() {
                 production_date: received_product.production_date,
                 expiration_date: received_product.expiration_date,
                 quantity: 1,
-              });
+                newProduct: false,
+              };
+
+              // Kiểm tra hàng chờ
+              if (!showModal) {
+                // Cập nhật thông tin sản phẩm vào form
+                setFormProduct(productData);
+                setShowModal(true); // Hiển thị modal
+                toast.success("Tìm thấy sản phẩm trong kho.");
+              } else {
+                // Cập nhật thông tin sản phẩm vào hàng chờ
+                setQueueBarcode((prev) => {
+                  const exists = prev.some((item) => item.barcode === productData.barcode);
+                  return exists ? prev : [...prev, productData];
+                });
+
+                toast.info("Một sản phẩm đã được thêm vào hàng chờ");
+              }
               setIsNewProduct(false);
-              toast.success("Tìm thấy sản phẩm trong CSDL.");
             } else if (!response.data.find) {
               const barcode = response.data.barcode;
-              // Cập nhật mã vạch vào form
-              setFormProduct((prevForm) => ({
-                ...prevForm,
-                barcode: barcode,
-              }));
+
+              const productData = {
+                barcode,
+                name: "",
+                category_id: "",
+                unit_price: "",
+                supplier_id: "",
+                production_date: "",
+                expiration_date: "",
+                quantity: 1,
+                newProduct: true,
+              };
+              // Kiểm tra hàng chờ
+              if (!showModal) {
+                // Cập nhật mã vạch vào form
+                setFormProduct(productData);
+                setShowModal(true);
+                toast.info("Không tìm thấy sản phẩm trong kho. Vui lòng nhập thông tin.");
+              } else {
+                // Cập nhật mã vạch vào form
+                setQueueBarcode((prev) => {
+                  const exists = prev.some((item) => item.barcode === productData.barcode);
+                  return exists ? prev : [...prev, productData];
+                });
+
+                toast.info("Một sản phẩm mới đã được thêm vào hàng chờ");
+              }
               setIsNewProduct(true);
-              toast.info("Không tìm thấy sản phẩm trong CSDL. Đây là sản phẩm mới. Vui lòng nhập thông tin sản phẩm.");
             }
-            setShowModal(true); // Hiển thị modal
           }
         } catch (error) {
           // console.error("Lỗi khi quét mã vạch:", error);
@@ -129,17 +183,16 @@ function Import() {
             console.log(`Đã xảy ra lỗi: ${error.message}`);
           }
         }
-      }, 500);
+      }, 1000);
     };
 
     startListening();
-    console.log("Danh sách sản phẩm được chọn ", selectedProducts); // Kiểm tra danh sách sản phẩm đã chọn
 
     // Dọn dẹp khi component bị unmount
     return () => clearInterval(intervalId);
 
 
-  }, [selectedProducts]);
+  }, [showModal]);
 
   // Tìm kiếm sản phẩm (chọn sản phẩm để thêm sản phẩm vào danh sách hiển thị bên dưới)
   const searchProducts = async (term) => {
@@ -150,7 +203,7 @@ function Import() {
     try {
       const response = await axios.get(`http://localhost:3000/api/search_products`, {
         params: { query: term },
-        headers,
+        withCredentials: true,
       });
 
       if (response.data && response.data.length > 0) {
@@ -168,6 +221,7 @@ function Import() {
       toast.error("Đã xảy ra lỗi khi tìm kiếm sản phẩm.");
     }
   };
+
   // Xóa sản phẩm vào danh sách hiển thị bên dưới
   const handleDeleteProduct = (productId) => {
     setSelectedProducts((prevProducts) =>
@@ -229,7 +283,6 @@ function Import() {
     // Kiểm tra xem người dùng đã nhập đủ các trường dữ liệu chưa
     if (!barcode || !name || !category_id || !unit_price || !supplier_id || !production_date || !expiration_date || !quantity) {
       toast.error("Vui lòng nhập đầy đủ thông tin sản phẩm!");
-      setShowModal(false);
       return;
     }
 
@@ -291,7 +344,7 @@ function Import() {
               await axios.post(
                 "http://localhost:3000/api/save_new_product",
                 product,
-                { headers }
+                { withCredentials: true, }
               );
               toast.success(`Sản phẩm mới ${product.name} đã được lưu.`);
               return { success: true, product };
@@ -332,15 +385,9 @@ function Import() {
       // Xử lý thông tin nhập hàng
       const import_id = `IP-${uuidv4().replace(/-/g, '').slice(0, 12)}`;
 
-      const token = localStorage.getItem("token");
-      const payload = token.split('.')[1];
-      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-      const decodedPayload = decodeURIComponent(escape(atob(base64)));
-      const userData = JSON.parse(decodedPayload);
-
       const contents = {
         import_id,
-        user_id: userData.user_id,
+        user_id: user.user_id,
         warehouse_id: import_warehouses.warehouse_id,
         total_quantity: syncedProducts.reduce((sum, product) => sum + product.quantity, 0),
         total_value: syncedProducts.reduce((sum, product) => sum + product.unit_price * product.quantity, 0),
@@ -353,7 +400,7 @@ function Import() {
       const response = await axios.post(
         "http://localhost:3000/api/imports_confirm",
         { contents, products: syncedProducts },
-        { headers }
+        { withCredentials: true, }
       );
 
 
@@ -370,9 +417,18 @@ function Import() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
+
   return (
     <div className="container mt- 4">
-      <ToastContainer />
       <h1 className="text-center mb-4">Quản Lý Nhập Hàng</h1>
       <div className="d-flex justify-content-between mb-3">
         <Button variant="primary"
@@ -393,8 +449,69 @@ function Import() {
           <FontAwesomeIcon icon={faPlus} className="me-2" />
           Thêm sản phẩm
         </Button>
-      </div>
 
+        <div className="position-relative">
+          <Button variant={queueBarcode.length > 0 ? "success" : "secondary"}
+            className="position-relative"
+            onClick={() => setShowQueue(!showQueue)}>
+            <FontAwesomeIcon icon={faClipboardList} className="me-2" />
+            Hàng chờ
+            {queueBarcode.length > 0 && (
+              <span
+                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style={{ fontSize: "0.8rem" }}
+              >
+                {queueBarcode.length}
+              </span>
+            )}
+          </Button>
+
+          {/* Dropdown Hàng chờ */}
+          {showQueue && (
+            <div
+              className="position-absolute end-0 mt-2 bg-white border shadow p-3"
+              style={{
+                width: "300px",
+                maxHeight: "200px",
+                overflowY: "auto",
+                zIndex: 1050,
+              }}
+            >
+              {queueBarcode.length === 0 ? (
+                <p className="text-muted text-center">Không có gì trong hàng chờ</p>
+              ) : (
+                <ul className="list-group">
+                  {queueBarcode.map((item, index) => (
+                    <li
+                      key={index}
+                      className="list-group-item"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        setFormProduct(item);
+                        setQueueBarcode((prevProducts) =>
+                          prevProducts.filter((product) => product.barcode !== item.barcode)
+                        );
+                        setShowModal(true);
+                        setShowQueue(false);
+                        if (item.newProduct) {
+                          toast.info("Đây là sản phẩm mới. Vui lòng nhập thêm thông tin.");
+                        } else {
+                          toast.info("Sản phẩm có sẵn trong kho. Vui lòng kiểm tra thông tin.")
+                        }
+                      }}
+                    >
+                      <strong>Mã vạch:</strong> {item.barcode}
+                      <br />
+                      <strong>{item.newProduct ? "(Sản phẩm mới)" : "Tên:"}</strong> {item.newProduct ? "" : item.name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+
+      </div>
       <Row>
         {/* Tìm kiếm sản phẩm sẽ hiển thị sản phẩm có thể bấm vào sản phẩm để thêm sản phẩm vào danh sách hiển thị bên dưới */}
         <Col md={8}>
@@ -425,7 +542,7 @@ function Import() {
                     top: "calc(100% + 5px)",
                     left: "0",
                     width: "700px",
-                    maxHeight: "200px",
+                    maxHeight: "300px",
                     overflowY: "auto",
                     zIndex: 1050,
                   }}
@@ -438,18 +555,18 @@ function Import() {
                       onClick={() => handleSelectProduct(results)}
                     >
                       <div>
-                        <strong>{results.name} - {categories.find(c => c.category_id === results.category_id).category_name}</strong>
+                        <strong>{results.name} - {results.barcode}</strong>
                         <Row>
                           <Col xs={20}>
                             <p className="mb-0 text-muted" style={{ fontSize: "0.9rem" }}>
-                              {results.unit_price} VNĐ - {suppliers.find(s => s.supplier_id === results.supplier_id).supplier_name}
+                              {results.unit_price} VNĐ - {suppliers.find(s => s.supplier_id === results.supplier_id).supplier_name} - {categories.find(c => c.category_id === results.category_id).category_name}
                             </p>
                           </Col>
                         </Row>
                         <Row>
                           <Col xs={20}>
                             <p className="mb-0 text-muted" style={{ fontSize: "0.9rem" }}>
-                              {new Date(results.production_date).toLocaleDateString("vi-VN")} - {new Date(results.expiration_date).toLocaleDateString("vi-VN")}
+                              NSX: {new Date(results.production_date).toLocaleDateString("vi-VN")} - NHH: {new Date(results.expiration_date).toLocaleDateString("vi-VN")}
                             </p>
                           </Col>
                         </Row>
@@ -572,7 +689,7 @@ function Import() {
       </Row>
       <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>Thêm sản phẩm mới</Modal.Title>
+          <Modal.Title> {isNewProduct ? "Thêm sản phẩm mới" : "Thông tin sản phẩm quét được"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
@@ -585,7 +702,7 @@ function Import() {
                     value={formProduct.barcode}
                     placeholder="Tự động nhận mã vạch"
                     onChange={(e) => setFormProduct({ ...formProduct, barcode: e.target.value })}
-                  // disabled={!!products_receive}
+                    readOnly
                   />
                 </Form.Group>
               </Col>
@@ -670,7 +787,9 @@ function Import() {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
+          <Button variant="secondary" onClick={() => {
+            setShowModal(false);
+          }}>
             Hủy
           </Button>
           <Button variant="primary" onClick={() => handleSaveNewProduct()}>

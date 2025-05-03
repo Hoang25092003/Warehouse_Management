@@ -31,9 +31,17 @@ router.post('/login', async (req, res) => {
       role: user.role || 'staff'
     }, SECRET_KEY, { expiresIn: '8h' });
 
+    // Gửi token vào cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,             // Bật nếu dùng HTTPS
+      // secure: process.env.NODE_ENV === 'production', // Đảm bảo chỉ bật secure khi môi trường là production
+      sameSite: 'Strict',
+      maxAge: 8 * 60 * 60 * 1000 // 8 giờ
+    });
+
     res.json({
       message: 'Đăng nhập thành công',
-      token,
       user: {
         user_id: user.user_id,
         username: user.username,
@@ -48,9 +56,20 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Route bảo mật
-router.get('/protected', authenticateToken, (req, res) => {
-  res.json({ message: `Hello ${req.user.username}, đây là dữ liệu bảo mật.` });
+// Đăng xuất
+router.post('/logout', (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: false,       // Phải khớp với cấu hình ban đầu
+    sameSite: 'Strict'  // Khớp với lúc login
+  });
+
+  res.json({ message: 'Đăng xuất thành công' });
+});
+
+router.get('/profile', authenticateToken, (req, res) => {
+  const user = req.user;
+  res.json({user});
 });
 
 module.exports = router;

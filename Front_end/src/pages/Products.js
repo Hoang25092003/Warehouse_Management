@@ -15,23 +15,19 @@ function Products() {
   const [editedProduct, setEditedProduct] = useState({});
   const [showModal, setShowModal] = useState(false);
 
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get("http://localhost:3000/api/products", {
+        withCredentials: true,
+      });
+      setProducts(response.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get("http://localhost:3000/api/products", {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        setProducts(response.data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
   }, []);
 
@@ -58,14 +54,12 @@ function Products() {
     console.log(`Xóa sản phẩm ID: ${product.product_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm: ${product.name}?`)) {
       try {
-        const token = localStorage.getItem('token');
         await axios.delete(`http://localhost:3000/api/products/${product.product_id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          withCredentials: true,
         });
         // Cập nhật lại danh sách sản phẩm sau khi xóa
         setProducts((prev) => prev.filter(p => p.product_id !== product.product_id));
+        fetchProducts();
         toast.success("Xóa sản phẩm thành công!");
       } catch (err) {
         console.error('❌ Chi tiết lỗi khi xóa sản phẩm:', err);
@@ -77,11 +71,8 @@ function Products() {
 
   const handleSaveEdit = async () => {
     try {
-      const token = localStorage.getItem("token");
       await axios.put(`http://localhost:3000/api/products/${editingProductId}`, editedProduct, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        withCredentials: true,
       });
 
       // Cập nhật danh sách sản phẩm
@@ -92,6 +83,7 @@ function Products() {
       setProducts(updatedProducts);
       setEditingProductId(null);
       setEditedProduct({});
+      fetchProducts();
       toast.success("Cập nhật sản phẩm thành công!");
     } catch (error) {
       toast.error("Lỗi khi cập nhật sản phẩm!");
@@ -237,6 +229,7 @@ function Products() {
                     name="barcode"
                     value={editedProduct.barcode || ""}
                     onChange={handleChange}
+                    readOnly
                   />
                 </Form.Group>
               </Col>

@@ -1,38 +1,43 @@
 import React, { useState, useEffect } from "react";
-import { Button, Row, Col, Form, Modal } from "react-bootstrap";
+import { Button, Row, Col, Form, Modal, Spinner } from "react-bootstrap";
 import { ToastContainer, toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { faExclamationTriangle, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import moment from "moment";
 
 function Check() {
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [isNewProduct, setIsNewProduct] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
-  const headers = {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
-  };
-  const navigate = useNavigate();
-  let warehouse_data = [];
-  let warehouse_id_data_received = [];
-  let quantity_in_stock_received = [];
   const [warehouse_id_data, setWarehouse_id_data] = useState([]);
   const [quantity_in_stock, setQuantity_in_stock] = useState([]);
   const [selectedWarehouseQuantity, setSelectedWarehouseQuantity] = useState(0);
   const [product_status, setProductStatus] = useState("");
   const [checked, setChecked] = useState(false);
+  const [queueBarcode, setQueueBarcode] = useState([]);
+  const [showQueue, setShowQueue] = useState(false);
+  const navigate = useNavigate();
+  let warehouse_data = [];
+  let warehouse_id_data_received = [];
+  let quantity_in_stock_received = [];
+
   useEffect(() => {
     // Gọi API để lấy danh sách nhà kho, nhà cung cấp, danh mục từ CSDL để hiển thị ở các selectbox
     const fetchDataSelectBox = async () => {
       try {
-        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", { headers });
+        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", { 
+          withCredentials: true,
+         });
 
         setWarehouses(warehousesRes.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu từ server!");
+      }finally {
+        setLoading(false);
       }
     };
     fetchDataSelectBox();
@@ -45,7 +50,9 @@ function Check() {
           warehouse_id_data_received = [];
           quantity_in_stock_received = [];
           // Gửi yêu cầu đến API để quét mã vạch
-          const response = await axios.get("http://localhost:3000/api/check_barcode_fetch");
+          const response = await axios.get("http://localhost:3000/api/check_barcode_fetch", { 
+            withCredentials: true,
+           });
           if (response.data.success) {
             if (response.data.find) {
               const received_product = response.data.product;
@@ -58,10 +65,15 @@ function Check() {
               checkProductStatus(received_product);
               setWarehouse_id_data(warehouse_id_data_received);
               setQuantity_in_stock(quantity_in_stock_received);
-              setSearchResults(received_product);
-              setIsNewProduct(false);
+              if(!searchResults){
+                setSearchResults(received_product);
+                toast.success("Tìm thấy sản phẩm trong kho hàng.");
+              }else{
+                setQueueBarcode(received_product);
+                toast.info("Một sản phẩm được thêm vào hàng chờ")
+              }
               setChecked(true);
-              toast.success("Tìm thấy sản phẩm trong kho hàng.");
+              setIsNewProduct(false);
             } else if (!response.data.find) {
               setIsNewProduct(true); //Show modal
               setChecked(false);
@@ -114,11 +126,82 @@ function Check() {
     setProductStatus("Bình thường 🟢");
   };
 
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
+
   return (
     <div className="container mt-4">
       <ToastContainer />
       {/* Header Section */}
-      <h1 className="text-center mb-4">Kiểm Hàng</h1>
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        {/* Header Title */}
+        <h1 className="text-center flex-grow-1 mb-0">Kiểm Hàng</h1>
+
+        {/* Queue Button */}
+        <div className="position-relative">
+          <Button variant={queueBarcode.length > 0 ? "success" : "secondary"}
+            className="position-relative"
+            onClick={() => setShowQueue(!showQueue)}>
+            <FontAwesomeIcon icon={faClipboardList} className="me-2" />
+            Hàng chờ
+            {queueBarcode.length > 0 && (
+              <span
+                className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style={{ fontSize: "0.8rem" }}
+              >
+                {queueBarcode.length}
+              </span>
+            )}
+          </Button>
+
+          {/* Dropdown Hàng chờ */}
+          {showQueue && (
+            <div
+              className="position-absolute end-0 mt-2 bg-white border shadow p-3"
+              style={{
+                width: "300px",
+                maxHeight: "200px",
+                overflowY: "auto",
+                zIndex: 1050,
+              }}
+            >
+              {queueBarcode.length === 0 ? (
+                <p className="text-muted text-center">Không có gì trong hàng chờ</p>
+              ) : (
+                <ul className="list-group">
+                  {queueBarcode.map((item, index) => (
+                    <li
+                      key={index}
+                      className="list-group-item"
+                      style={{ cursor: "pointer" }}
+                      onClick={() => {
+                        setSearchResults(item);
+                        setQueueBarcode((prevProducts) =>
+                          prevProducts.filter((product) => product.barcode !== item.barcode)
+                        );
+                        setShowQueue(false);
+                        toast.info("Vui lòng kiểm tra thông tin.")
+                      }}
+                    >
+                      <strong>Tên:</strong> {item.name}
+                      <br />
+                      <strong>Mã vạch:</strong> {item.barcode}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
 
       {/* Product List */}
       <div className="card p-4 shadow-sm">
