@@ -3,19 +3,19 @@
 #include <ESP8266WebServer.h>
 #include <EEPROM.h>
 #include <Hash.h>
-// #include <WiFiClientSecure.h>
-#include <ESP8266HTTPClient.h>  // tạm thời để dev
+#include <WiFiClientSecure.h>
+#include <ESP8266HTTPClient.h>
 
 #define EEPROM_SIZE 512
 #define SECRET_KEY "WarehouseManagermentIoT"
 #define AUTH_TOKEN "TokenIoTVMU"
 
 // Chân nút reset
-#define RESET_BUTTON_PIN 0 //D3 = GPIO0
+#define RESET_BUTTON_PIN 0  //D3 = GPIO0
 // Chân White LED chỉ báo
-#define WHITE_LED_PIN 2 //D4 = GPIO2
+#define WHITE_LED_PIN 2  //D4 = GPIO2
 // Chân Yellow LED chỉ báo
-#define YELLOW_LED_PIN 4 //D5 = GPIO14
+#define YELLOW_LED_PIN 4  //D5 = GPIO14
 
 // Cổng ESP Config
 ESP8266WebServer server(80);
@@ -27,17 +27,20 @@ const unsigned long REQUEST_INTERVAL = 500;
 
 
 // Biến lưu cấu hình
+const String serverBase = "http://192.168.1.71:3000";
+// const String server = "https://warehouse-management-r8on.onrender.com";
+const String serverUrl = serverBase + "/api/receive_barcode_ESP";
+const String device_id = "DEV001";
+
 String ssid = "";
 String password = "";
-String serverUrl = "http://192.168.1.6:3000/api/receive_barcode_ESP";
-String device_id = "DEV001";
 String device_type = "";
 
 // Biến xử lý nút reset
 volatile bool isResetPressed = false;
 unsigned long resetPressedTime = 0;
 
-void ICACHE_RAM_ATTR handleResetButton(); // Khai báo hàm ISR
+void ICACHE_RAM_ATTR handleResetButton();  // Khai báo hàm ISR
 
 void setup() {
   // setup cổng giao tiếp
@@ -99,6 +102,13 @@ bool connectWiFi() {
 }
 // ------------------- Thiết lập chế độ Access Point để cấu hình WiFi-----------------------------
 void setupAPMode() {
+  // Xóa EEPROM
+  for (int i = 0; i < EEPROM_SIZE; i++) {
+    EEPROM.write(i, 0xFF); // Xóa từng ô nhớ
+  }
+  EEPROM.commit(); // Ghi thay đổi vào flash
+  Serial.println("EEPROM has been erased.");
+
   WiFi.softAP("ESP8266_Config");
   IPAddress ip = WiFi.softAPIP();
   Serial.println("---------------AP Mode - Connect to ESP8266_Config---------------");
@@ -164,12 +174,12 @@ void sendToServer(const char* barcode) {
     return;
   }
 
-  // tạm thời comment để dev
   // WiFiClientSecure client;
-  // client.setInsecure(); // Bỏ qua xác minh chứng chỉ SSL
+  // client.setInsecure();  // Bỏ qua xác minh chứng chỉ SSL
 
   WiFiClient client;
   HTTPClient http;
+  http.setTimeout(10000);
 
   String barcodeStr = String(barcode);
   String signature = createSignature(barcodeStr, device_type);
@@ -188,25 +198,20 @@ void sendToServer(const char* barcode) {
     String response = http.getString();
     Serial.println("Server response: " + response);
     // Hiện đèn báo thành công
-    if (httpCode == 200) {
-      indicateSuccess();
-    }
-
+    if (httpCode == 200) indicateSuccess();
   } else {
     Serial.printf("HTTP Code: %d\n", httpCode);
     Serial.printf("HTTP Error: %s\n", http.errorToString(httpCode).c_str());
   }
   // Hiện đèn báo thất bại
-  if (httpCode != 200) {
-    indicateFailure();
-  }
+  if (httpCode != 200) indicateFailure();
+
   http.end();
 }
 // ------------------- HÀM EEPROM ----------------------
 // 0–31: SSID
 // 32–63: PASSWORD
-// 64–143: serverUrl
-// 144–175: device_type
+// 64–143: device_type
 
 //EEPROM: Ghi chuỗi vào EEPROM (dài tối đa maxLength)
 void writeStringToEEPROM(int addr, const String& data, int maxLength) {
@@ -228,44 +233,35 @@ String readStringFromEEPROM(int addr, int maxLength) {
 void saveConfigToEEPROM() {
   writeStringToEEPROM(0, ssid, 32);
   writeStringToEEPROM(32, password, 32);
-  writeStringToEEPROM(64, serverUrl, 80);
-  writeStringToEEPROM(144, device_type, 32);
+  writeStringToEEPROM(64, device_type, 32);
   EEPROM.commit();
 }
 // Đọc cấu hình từ EEPROM sau khi khởi động
 void loadConfigFromEEPROM() {
   ssid = readStringFromEEPROM(0, 32);
   password = readStringFromEEPROM(32, 32);
-  serverUrl = readStringFromEEPROM(64, 80);
-  device_type = readStringFromEEPROM(144, 32);
+  device_type = readStringFromEEPROM(64, 32);
 }
 
 // --------- GIAO DIỆN FORM CẤU HÌNH -------------------
 void handleRoot() {
   int n = WiFi.scanNetworks();
-  String html = "<html><body><h2>ESP8266 Config</h2>"
-                "<form action='/save' method='POST'>";
-
+  String html = "<html><body><h2>ESP8266 Config</h2><form action='/save' method='POST'>";
   html += "SSID: <select name='ssid'>";
   for (int i = 0; i < n; ++i) {
-    String ssidOption = WiFi.SSID(i);
-    html += "<option value='" + ssidOption + "'";
-    if (ssidOption == ssid) html += " selected";
-    html += ">" + ssidOption + "</option>";
+    String s = WiFi.SSID(i);
+    html += "<option value='" + s + "'";
+    if (s == ssid) html += " selected";
+    html += ">" + s + "</option>";
   }
   html += "</select><br>";
 
-  html += "Password: <input type='password' name='password' value='" + password + "'><br>"
-                                                                                  "Device ID: <select name='device'>"
-                                                                                  "<option value='check' "
-          + (device_type == "check" ? "selected" : "") + ">Kiểm hàng</option>"
-                                                       "<option value='import' "
-          + (device_type == "import" ? "selected" : "") + ">Nhập hàng</option>"
-                                                        "<option value='export' "
-          + (device_type == "export" ? "selected" : "") + ">Xuất hàng</option>"
-                                                        "</select><br>"
-                                                        "<input type='submit' value='Save & Reboot'>"
-                                                        "</form></body></html>";
+  html += "Password: <input type='password' name='password' value='" + password + "'><br>";
+  html += "Device Type: <select name='device_type'>";
+  html += "<option value='check'" + String(device_type == "check" ? " selected" : "") + ">Kiểm hàng</option>";
+  html += "<option value='import'" + String(device_type == "import" ? " selected" : "") + ">Nhập hàng</option>";
+  html += "<option value='export'" + String(device_type == "export" ? " selected" : "") + ">Xuất hàng</option>";
+  html += "</select><br><input type='submit' value='Save & Reboot'></form></body></html>";
 
   server.send(200, "text/html", html);
 }
@@ -274,8 +270,7 @@ void handleRoot() {
 void handleSave() {
   ssid = server.arg("ssid");
   password = server.arg("password");
-  // serverUrl = server.arg("server");
-  device_type = server.arg("device");
+  device_type = server.arg("device_type");
 
   saveConfigToEEPROM();
 
@@ -313,8 +308,8 @@ void checkResetButton() {
 // ------------------- HÀM XỬ LÝ RGB LED ----------------------
 // Gửi device_type tới Arduino qua I2C
 void sendDeviceTypeToArduino() {
-  Wire.beginTransmission(8); // I2C address of Arduino
-  Wire.write(device_type.c_str()); // Gửi chuỗi device_type
+  Wire.beginTransmission(8);        // I2C address of Arduino
+  Wire.write(device_type.c_str());  // Gửi chuỗi device_type
   Wire.endTransmission();
   Serial.println("Device ID sent to Arduino: " + device_type);
 }

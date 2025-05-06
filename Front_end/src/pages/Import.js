@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Card, Row, Col, Spinner } from "react-bootstrap";
 import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle, faPlus, faSearch, faTrash, faBars, faClipboardList } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle, faPlus, faSearch, faTrash, faClipboardList } from "@fortawesome/free-solid-svg-icons";
 import axios from "axios";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -38,13 +38,13 @@ function Import() {
     // Gọi API để lấy danh sách nhà kho, nhà cung cấp, danh mục từ CSDL để hiển thị ở các selectbox
     const fetchDataSelectBox = async () => {
       try {
-        const categoriesRes = await axios.get("http://localhost:3000/api/categories", {
+        const categoriesRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/categories`, {
           withCredentials: true,
         });
-        const suppliersRes = await axios.get("http://localhost:3000/api/suppliers", {
+        const suppliersRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/suppliers`, {
           withCredentials: true,
         });
-        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", {
+        const warehousesRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/warehouses`, {
           withCredentials: true,
         });
 
@@ -53,7 +53,7 @@ function Import() {
         setWarehouses(warehousesRes.data);
       } catch (error) {
         toast.error("Không thể tải dữ liệu từ server!");
-      }finally {
+      } finally {
         setLoading(false);
       }
     };
@@ -61,7 +61,7 @@ function Import() {
 
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/profile", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
           method: "GET",
           credentials: "include", // Quan trọng để gửi cookie
         });
@@ -75,19 +75,21 @@ function Import() {
       } catch (err) {
         console.error("Không thể lấy thông tin người dùng:", err);
         setUser(null);
-      }finally {
+      } finally {
         setLoading(false);
       }
     };
 
     fetchUser();
+  }, [user]);
 
+  useEffect(() => {
     let intervalId;
     const startListening = () => {
       intervalId = setInterval(async () => {
         try {
           // Gửi yêu cầu đến API để quét mã vạch
-          const response = await axios.get("http://localhost:3000/api/barcode_fetch", {
+          const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/barcode_fetch`, {
             withCredentials: true,
           });
 
@@ -105,67 +107,76 @@ function Import() {
               quantity: 1,
             });
 
-            if (response.data.find) {
-              const received_product = response.data.product;
-              console.log("Sản phẩm tìm được", received_product); // Kiểm tra mã vạch nhận được từ API
-              const productData = {
-                barcode: received_product.barcode,
-                name: received_product.name,
-                category_id: received_product.category_id,
-                unit_price: received_product.unit_price,
-                supplier_id: received_product.supplier_id,
-                production_date: received_product.production_date,
-                expiration_date: received_product.expiration_date,
-                quantity: 1,
-                newProduct: false,
-              };
+            const userID = localStorage.getItem('user_id');
+            console.log("User đang đăng nhập:", userID);
+            console.log("User nhận được: ", response.data.assignedUser);
 
-              // Kiểm tra hàng chờ
-              if (!showModal) {
-                // Cập nhật thông tin sản phẩm vào form
-                setFormProduct(productData);
-                setShowModal(true); // Hiển thị modal
-                toast.success("Tìm thấy sản phẩm trong kho.");
-              } else {
-                // Cập nhật thông tin sản phẩm vào hàng chờ
-                setQueueBarcode((prev) => {
-                  const exists = prev.some((item) => item.barcode === productData.barcode);
-                  return exists ? prev : [...prev, productData];
-                });
+            // Kiểm tra nếu userID có trong assignedUser
+            const checkAssignedUser = response.data.assignedUser.some(user => user.assigned_userID === userID);
 
-                toast.info("Một sản phẩm đã được thêm vào hàng chờ");
+            if (checkAssignedUser) {
+              if (response.data.find) {
+                const received_product = response.data.product;
+                console.log("Sản phẩm tìm được", received_product); // Kiểm tra mã vạch nhận được từ API
+                const productData = {
+                  barcode: received_product.barcode,
+                  name: received_product.name,
+                  category_id: received_product.category_id,
+                  unit_price: received_product.unit_price,
+                  supplier_id: received_product.supplier_id,
+                  production_date: received_product.production_date,
+                  expiration_date: received_product.expiration_date,
+                  quantity: 1,
+                  newProduct: false,
+                };
+
+                // Kiểm tra hàng chờ
+                if (!showModal) {
+                  // Cập nhật thông tin sản phẩm vào form
+                  setFormProduct(productData);
+                  setShowModal(true); // Hiển thị modal
+                  toast.success("Tìm thấy sản phẩm trong kho.");
+                } else {
+                  // Cập nhật thông tin sản phẩm vào hàng chờ
+                  setQueueBarcode((prev) => {
+                    const exists = prev.some((item) => item.barcode === productData.barcode);
+                    return exists ? prev : [...prev, productData];
+                  });
+
+                  toast.info("Một sản phẩm đã được thêm vào hàng chờ");
+                }
+                setIsNewProduct(false);
+              } else if (!response.data.find) {
+                const barcode = response.data.barcode;
+
+                const productData = {
+                  barcode,
+                  name: "",
+                  category_id: "",
+                  unit_price: "",
+                  supplier_id: "",
+                  production_date: "",
+                  expiration_date: "",
+                  quantity: 1,
+                  newProduct: true,
+                };
+                // Kiểm tra hàng chờ
+                if (!showModal) {
+                  // Cập nhật mã vạch vào form
+                  setFormProduct(productData);
+                  setShowModal(true);
+                  toast.info("Không tìm thấy sản phẩm trong kho. Vui lòng nhập thông tin.");
+                } else {
+                  // Cập nhật mã vạch vào form
+                  setQueueBarcode((prev) => {
+                    const exists = prev.some((item) => item.barcode === productData.barcode);
+                    return exists ? prev : [...prev, productData];
+                  });
+
+                  toast.info("Một sản phẩm mới đã được thêm vào hàng chờ");
+                }
+                setIsNewProduct(true);
               }
-              setIsNewProduct(false);
-            } else if (!response.data.find) {
-              const barcode = response.data.barcode;
-
-              const productData = {
-                barcode,
-                name: "",
-                category_id: "",
-                unit_price: "",
-                supplier_id: "",
-                production_date: "",
-                expiration_date: "",
-                quantity: 1,
-                newProduct: true,
-              };
-              // Kiểm tra hàng chờ
-              if (!showModal) {
-                // Cập nhật mã vạch vào form
-                setFormProduct(productData);
-                setShowModal(true);
-                toast.info("Không tìm thấy sản phẩm trong kho. Vui lòng nhập thông tin.");
-              } else {
-                // Cập nhật mã vạch vào form
-                setQueueBarcode((prev) => {
-                  const exists = prev.some((item) => item.barcode === productData.barcode);
-                  return exists ? prev : [...prev, productData];
-                });
-
-                toast.info("Một sản phẩm mới đã được thêm vào hàng chờ");
-              }
-              setIsNewProduct(true);
             }
           }
         } catch (error) {
@@ -201,7 +212,7 @@ function Import() {
       return;
     }
     try {
-      const response = await axios.get(`http://localhost:3000/api/search_products`, {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/search_products`, {
         params: { query: term },
         withCredentials: true,
       });
@@ -342,7 +353,7 @@ function Import() {
           newProductWithIds.map(async (product) => {
             try {
               await axios.post(
-                "http://localhost:3000/api/save_new_product",
+                `${process.env.REACT_APP_API_URL}/api/save_new_product`,
                 product,
                 { withCredentials: true, }
               );
@@ -398,7 +409,7 @@ function Import() {
       console.log("Thông tin sản phẩm nhập kho", selectedProducts)
       // Gửi yêu cầu xác nhận nhập hàng
       const response = await axios.post(
-        "http://localhost:3000/api/imports_confirm",
+        `${process.env.REACT_APP_API_URL}/api/imports_confirm`,
         { contents, products: syncedProducts },
         { withCredentials: true, }
       );

@@ -24,7 +24,7 @@ function Supplier() {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/suppliers", {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/suppliers`, {
         withCredentials: true,
       });
       setSuppliers(response.data);
@@ -68,7 +68,7 @@ function Supplier() {
     console.log(`Xóa NCC ID: ${supplier.supplier_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa nhà cung cấp: ${supplier.supplier_name}?`)) {
       try {
-        await axios.delete(`http://localhost:3000/api/suppliers/${supplier.supplier_id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/suppliers/${supplier.supplier_id}`, {
           withCredentials: true,
         });
         // Cập nhật lại danh sách nhà cung cấp sau khi xóa
@@ -93,7 +93,7 @@ function Supplier() {
   const handleAddSupplier = async () => {
     try {
       const newSupplier = { ...formSupplier };
-      const response = await axios.post("http://localhost:3000/api/suppliers", newSupplier, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/suppliers`, newSupplier, {
         withCredentials: true,
       });
       setSuppliers(prev => [...prev, response.data]);
@@ -118,7 +118,7 @@ function Supplier() {
       };
 
       const response = await axios.put(
-        `http://localhost:3000/api/suppliers/${editingSupplierId}`, updatedSupplier,
+        `${process.env.REACT_APP_API_URL}/api/suppliers/${editingSupplierId}`, updatedSupplier,
         {
           withCredentials: true,
         }

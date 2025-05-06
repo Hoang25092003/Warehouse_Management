@@ -35,7 +35,7 @@ function Account() {
 
   const fetchUser = async () => {
     try {
-      const res = await fetch("http://localhost:3000/api/profile", {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
         method: "GET",
         credentials: "include", // Quan trọng để gửi cookie
       });
@@ -57,7 +57,7 @@ function Account() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/users', {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/users`, {
         withCredentials: true,
       });
       // Mặc định tất cả password đều ẩn
@@ -106,7 +106,7 @@ function Account() {
     console.log(`Xóa User ID: ${account.user_id}`);
     if (window.confirm("Bạn có chắc chắn muốn xóa tài khoản này?")) {
       try {
-        await axios.delete(`http://localhost:3000/api/users/${account.user_id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/users/${account.user_id}`, {
           withCredentials: true,
         });
         setAccounts((prevAccounts) => prevAccounts.filter((acc) => acc.user_id !== account.user_id));
@@ -154,7 +154,7 @@ function Account() {
         toast.error("Email không hợp lệ!");
         return;
       }
-      const response = await axios.post('http://localhost:3000/api/users', newAccount, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/users`, newAccount, {
         withCredentials: true,
       });
       setAccounts((prevAccounts) => [...prevAccounts, response.data]);
@@ -193,7 +193,7 @@ function Account() {
         toast.error("Email không hợp lệ!");
         return;
       }
-      const response = await axios.put(`http://localhost:3000/api/users/${editingUserId}`, updatedWarehouse, {
+      const response = await axios.put(`${process.env.REACT_APP_API_URL}/api/users/${editingUserId}`, updatedWarehouse, {
         withCredentials: true,
       });
       setAccounts((prevAccounts) =>
@@ -347,7 +347,7 @@ function Account() {
                 <td>{account.email}</td>
                 <td>{account.fullname || 'N/A'}</td>
                 <td>{account.phone || 'N/A'}</td>
-                <td>{account.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</td>
+                <td>{account.role === 'admin' ? 'Quản trị viên' : 'Nhân viên'}</td>
                 <td className="text-center">
                   <Button
                     variant="warning"

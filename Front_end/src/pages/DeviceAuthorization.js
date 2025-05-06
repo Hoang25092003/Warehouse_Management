@@ -20,7 +20,7 @@ function DevicesAuthorization() {
 
   const fetchDevices = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/devices", {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/devices`, {
         withCredentials: true,
       });
       setDevices(response.data);
@@ -33,7 +33,7 @@ function DevicesAuthorization() {
 
   const fetchDevicesAuthorization = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/devicesAuth", {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/devicesAuth`, {
         withCredentials: true,
       });
       setDevicesAuthorization(response.data);
@@ -46,7 +46,7 @@ function DevicesAuthorization() {
 
   const fetchAssignUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/assign_users', {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/assign_users`, {
         withCredentials: true,
       });
       setAssignUsers(response.data);
@@ -69,7 +69,7 @@ function DevicesAuthorization() {
 
   const handleSave = async () => {
     try {
-      await axios.put(`http://localhost:3000/api/devicesAuth/${editRowId}`, editedRow, {
+      await axios.put(`${process.env.REACT_APP_API_URL}/api/devicesAuth/${editRowId}`, editedRow, {
         withCredentials: true
       });
       toast.success("Đã cập nhật thành công");
@@ -83,7 +83,7 @@ function DevicesAuthorization() {
 
   const handleDelete = async (row) => {
     try {
-      await axios.delete(`http://localhost:3000/api/devicesAuth/${row.DA_id}`, {
+      await axios.delete(`${process.env.REACT_APP_API_URL}/api/devicesAuth/${row.DA_id}`, {
         withCredentials: true
       });
       toast.success("Đã xóa thành công");
@@ -106,7 +106,7 @@ function DevicesAuthorization() {
         toast.warn("Thiết bị đang được sửa dụng vui lòng chọn thiết bị khác!");
         return;
       }
-      await axios.post("http://localhost:3000/api/devicesAuth", newRow, {
+      await axios.post("${process.env.REACT_APP_API_URL}/api/devicesAuth", newRow, {
         withCredentials: true
       });
       toast.success("Đã thêm mới thành công");

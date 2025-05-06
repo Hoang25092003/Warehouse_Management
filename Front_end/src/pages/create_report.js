@@ -21,7 +21,7 @@ function CreateReport() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/profile", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
           method: "GET",
           credentials: "include", // Quan trọng để gửi cookie
         });
@@ -58,13 +58,13 @@ function CreateReport() {
       let endpoint = '';
       switch (reportType) {
         case 'import':
-          endpoint = 'http://localhost:3000/api/reports/imports';
+          endpoint = `${process.env.REACT_APP_API_URL}/api/reports/imports`;
           break;
         case 'export':
-          endpoint = 'http://localhost:3000/api/reports/exports';
+          endpoint = `${process.env.REACT_APP_API_URL}/api/reports/exports`;
           break;
         case 'inventory':
-          endpoint = 'http://localhost:3000/api/reports/inventory';
+          endpoint = `${process.env.REACT_APP_API_URL}/api/reports/inventory`;
           break;
         default:
           throw new Error("Loại báo cáo không hợp lệ");
@@ -92,7 +92,7 @@ function CreateReport() {
       // setImportReportData(null);
       try {
         const importReportResponse = await axios.post(
-          `http://localhost:3000/api/import_detail/${report_id}`,
+          `${process.env.REACT_APP_API_URL}/api/import_detail/${report_id}`,
           {
             withCredentials: true,
           }
@@ -107,7 +107,7 @@ function CreateReport() {
       // setExportReportData(null);
       try {
         const exportReportResponse = await axios.post(
-          `http://localhost:3000/api/export_detail/${report_id}`,
+          `${process.env.REACT_APP_API_URL}/api/export_detail/${report_id}`,
           {
             withCredentials: true,
           }
@@ -141,7 +141,7 @@ function CreateReport() {
     }
     const reportContent = `Báo cáo ${contentReportType} tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
 
-    await axios.post('http://localhost:3000/api/reports', {
+    await axios.post(`${process.env.REACT_APP_API_URL}/api/reports`, {
       report_type: reportType,
       user_id: user.user_id,
       content: reportContent

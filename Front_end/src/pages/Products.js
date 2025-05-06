@@ -17,7 +17,7 @@ function Products() {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/products", {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/products`, {
         withCredentials: true,
       });
       setProducts(response.data);
@@ -54,7 +54,7 @@ function Products() {
     console.log(`Xóa sản phẩm ID: ${product.product_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa sản phẩm: ${product.name}?`)) {
       try {
-        await axios.delete(`http://localhost:3000/api/products/${product.product_id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/products/${product.product_id}`, {
           withCredentials: true,
         });
         // Cập nhật lại danh sách sản phẩm sau khi xóa
@@ -71,7 +71,7 @@ function Products() {
 
   const handleSaveEdit = async () => {
     try {
-      await axios.put(`http://localhost:3000/api/products/${editingProductId}`, editedProduct, {
+      await axios.put(`${process.env.REACT_APP_API_URL}/api/products/${editingProductId}`, editedProduct, {
         withCredentials: true,
       });
 

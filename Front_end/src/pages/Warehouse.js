@@ -24,7 +24,7 @@ function Warehouse() {
 
   const fetchWarehouses = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/warehouses', {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/warehouses`, {
         withCredentials: true,
       });
       setWarehouses(response.data);
@@ -98,7 +98,7 @@ function Warehouse() {
     console.log(`Xóa kho hàng ID: ${warehouse.warehouse_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa kho hàng: ${warehouse.name}?`)) {
       try {
-        await axios.delete(`http://localhost:3000/api/warehouses/${warehouse.warehouse_id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/warehouses/${warehouse.warehouse_id}`, {
           withCredentials: true,
         });
         // Cập nhật lại danh sách kho hàng sau khi xóa
@@ -123,7 +123,7 @@ function Warehouse() {
   const handleAddWarehouse = async () => {
     try {
       const newWarehouse = { ...formWarehouse, current_capacity: 0 }; // Mặc định là 0
-      const response = await axios.post("http://localhost:3000/api/warehouses", newWarehouse, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/warehouses`, newWarehouse, {
         withCredentials: true,
       });
       setWarehouses(prev => [...prev, response.data]);
@@ -147,7 +147,7 @@ function Warehouse() {
       };
 
       const response = await axios.put(
-        `http://localhost:3000/api/warehouses/${editingWarehouseId}`, updatedWarehouse,
+        `${process.env.REACT_APP_API_URL}/api/warehouses/${editingWarehouseId}`, updatedWarehouse,
         {
           withCredentials: true,
         }

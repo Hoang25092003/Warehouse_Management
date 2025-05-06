@@ -8,7 +8,7 @@ function HistoryReport() {
 
     const fetchSavedReports = async () => {
         try {
-            const response = await axios.get("http://localhost:3000/api/savedreports", {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/savedreports`, {
                 withCredentials: true,
             });
             setSavedReports(response.data);

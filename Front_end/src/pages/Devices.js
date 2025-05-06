@@ -22,7 +22,7 @@ function Devices() {
 
   const fetchDevices = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/devices", {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/devices`, {
         withCredentials: true,
       });
       console.log("Dữ liệu từ API:", response.data.device);
@@ -65,7 +65,7 @@ function Devices() {
     console.log(`Xóa device ID: ${device.device_id}`);
     if (window.confirm(`Bạn có chắc chắn muốn xóa thiết bị: ${device.device_id}?`)) {
       try {
-        await axios.delete(`http://localhost:3000/api/devices/${device.device_id}`, {
+        await axios.delete(`${process.env.REACT_APP_API_URL}/api/devices/${device.device_id}`, {
           withCredentials: true,
         });
         // Cập nhật lại danh sách thiết bị sau khi xóa
@@ -99,7 +99,7 @@ function Devices() {
         toast.warn("Mã thiết bị đã tồn tại!");
         return;
       }
-      const response = await axios.post("http://localhost:3000/api/devices", newDevice, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/devices`, newDevice, {
         withCredentials: true,
       });
       setDevices(prev => [...prev, response.data]);
@@ -122,7 +122,7 @@ function Devices() {
       };
 
       const response = await axios.put(
-        `http://localhost:3000/api/devices/${editingDeviceId}`, updatedDevice,
+        `${process.env.REACT_APP_API_URL}/api/devices/${editingDeviceId}`, updatedDevice,
         {
           withCredentials: true,
         }

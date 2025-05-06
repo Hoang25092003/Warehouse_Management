@@ -65,7 +65,7 @@ function Export() {
     // Gọi API để lấy danh sách nhà kho, nhà cung cấp, danh mục từ CSDL để hiển thị ở các selectbox
     const fetchDataSelectBox = async () => {
       try {
-        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", { 
+        const warehousesRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/warehouses`, { 
           withCredentials: true,
          });
 
@@ -81,7 +81,7 @@ function Export() {
 
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/profile", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
           method: "GET",
           credentials: "include", // Quan trọng để gửi cookie
         });
@@ -108,7 +108,7 @@ function Export() {
       intervalId = setInterval(async () => {
         try {
           // Gửi yêu cầu đến API để quét mã vạch
-          const response = await axios.get("http://localhost:3000/api/export_barcode_fetch", { 
+          const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/export_barcode_fetch`, { 
             withCredentials: true,
            });
 
@@ -204,7 +204,7 @@ function Export() {
       return;
     }
     try {
-      const response = await axios.get(`http://localhost:3000/api/search_export_products`, {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/search_export_products`, {
         params: { query: term },
         withCredentials: true,
       });
@@ -331,7 +331,7 @@ function Export() {
 
       // Gửi yêu cầu xác nhận xuất hàng
       const response = await axios.post(
-        "http://localhost:3000/api/exports_confirm",
+        `${process.env.REACT_APP_API_URL}/api/exports_confirm`,
         { contents, products: selectedProducts },
         { withCredentials: true, }
       );

@@ -17,7 +17,7 @@ const Layout = ({ children }) => {
     // Gọi API để lấy thông tin người dùng từ cookie
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/profile", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
           method: "GET",
           credentials: "include", // Quan trọng để gửi cookie
         });
@@ -49,7 +49,7 @@ const Layout = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3000/api/logout', {
+      await fetch(`${process.env.REACT_APP_API_URL}/api/logout`, {
         method: 'POST',
         credentials: 'include', // Quan trọng để gửi cookie
       });

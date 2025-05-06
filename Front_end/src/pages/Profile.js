@@ -24,7 +24,7 @@ const Profile = () => {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await fetch("http://localhost:3000/api/profile", {
+                const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
                     method: "GET",
                     credentials: "include",
                 });
@@ -51,7 +51,7 @@ const Profile = () => {
 
         const fetchUserInfo = async () => {
             try {
-                const response = await axios.get(`http://localhost:3000/api/UserInfo/${user.user_id}`, {
+                const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/UserInfo/${user.user_id}`, {
                     withCredentials: true,
                 });
 
@@ -94,7 +94,7 @@ const Profile = () => {
     const handleSaveUserInfo = async () => {
         try {
             const response = await axios.put(
-                `http://localhost:3000/api/UserInfo`,
+                `${process.env.REACT_APP_API_URL}/api/UserInfo`,
                 { ...userInfo },
                 {
                     withCredentials: true,
@@ -119,7 +119,7 @@ const Profile = () => {
             }
 
             const response = await axios.put(
-                `http://localhost:3000/api/AccountInfo`,
+                `${process.env.REACT_APP_API_URL}/api/AccountInfo`,
                 {
                     username: accountInfo.username,
                     password: accountInfo.password,

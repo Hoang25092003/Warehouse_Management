@@ -29,7 +29,7 @@ function Check() {
     // Gọi API để lấy danh sách nhà kho, nhà cung cấp, danh mục từ CSDL để hiển thị ở các selectbox
     const fetchDataSelectBox = async () => {
       try {
-        const warehousesRes = await axios.get("http://localhost:3000/api/warehouses", { 
+        const warehousesRes = await axios.get(`${process.env.REACT_APP_API_URL}/api/warehouses`, { 
           withCredentials: true,
          });
 
@@ -50,7 +50,7 @@ function Check() {
           warehouse_id_data_received = [];
           quantity_in_stock_received = [];
           // Gửi yêu cầu đến API để quét mã vạch
-          const response = await axios.get("http://localhost:3000/api/check_barcode_fetch", { 
+          const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/check_barcode_fetch`, { 
             withCredentials: true,
            });
           if (response.data.success) {

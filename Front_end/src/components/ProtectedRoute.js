@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Spinner} from "react-bootstrap";
 import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -8,7 +9,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/profile", {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/profile`, {
           method: "GET",
           credentials: "include", // Quan trọng để gửi cookie
         });
@@ -16,6 +17,9 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
         if (!res.ok) throw new Error("Không hợp lệ");
 
         const data = await res.json();
+        if (data.user && data.user.user_id) {
+          localStorage.setItem('user_id', data.user.user_id); // Lưu user_id vào localStorage
+        }
         setUser(data.user);
       } catch (err) {
         console.log("Không thể lấy thông tin người dùng:", err);
@@ -26,9 +30,17 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     };
 
     fetchUser();
-  }, [user]);
+  }, []);
 
-  if (loading) return <div>Đang kiểm tra đăng nhập...</div>;
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
 
   // Chưa đăng nhập
   if (!user) {

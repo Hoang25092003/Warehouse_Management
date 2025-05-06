@@ -22,7 +22,7 @@ function Category() {
 
     const fetchcategories = async () => {
         try {
-            const response = await axios.get('http://localhost:3000/api/categories', {
+            const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/categories`, {
                 withCredentials: true,
             });
             setCategories(response.data);
@@ -64,7 +64,7 @@ function Category() {
         console.log(`Xóa danh mục ID: ${category.warehouse_id}`);
         if (window.confirm(`Bạn có chắc chắn muốn xóa danh mục: ${category.category_name}?`)) {
             try {
-                await axios.delete(`http://localhost:3000/api/categories/${category.category_id}`, {
+                await axios.delete(`${process.env.REACT_APP_API_URL}/api/categories/${category.category_id}`, {
                     withCredentials: true,
                 });
                 // Cập nhật lại danh sách danh mục sau khi xóa
@@ -96,7 +96,7 @@ function Category() {
                 formCategory.description = formCategory.category_name;
             }
             const newCategory = { ...formCategory };
-            const response = await axios.post("http://localhost:3000/api/categories", newCategory, {
+            const response = await axios.post("${process.env.REACT_APP_API_URL}/api/categories", newCategory, {
                 withCredentials: true,
             });
             setCategories(prev => [...prev, response.data.category]);
@@ -122,7 +122,7 @@ function Category() {
             };
 
             const response = await axios.put(
-                `http://localhost:3000/api/categories/${editingCategoryId}`, updatedCategory,
+                `${process.env.REACT_APP_API_URL}/api/categories/${editingCategoryId}`, updatedCategory,
                 {
                     withCredentials: true,
                 }
