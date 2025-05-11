@@ -34,9 +34,11 @@ router.post('/login', async (req, res) => {
     // Gửi token vào cookie
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false,             // Bật nếu dùng HTTPS
+      // secure: false,             // Bật nếu dùng HTTPS
       // secure: process.env.NODE_ENV === 'production', // Đảm bảo chỉ bật secure khi môi trường là production
-      sameSite: 'Strict',
+      // sameSite: 'None',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
       maxAge: 8 * 60 * 60 * 1000 // 8 giờ
     });
 
@@ -60,8 +62,10 @@ router.post('/login', async (req, res) => {
 router.post('/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
-    secure: false,       // Phải khớp với cấu hình ban đầu
-    sameSite: 'Strict'  // Khớp với lúc login
+    // secure: false,       // Phải khớp với cấu hình ban đầu
+    // sameSite: 'Strict'  // Khớp với lúc login
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
   });
 
   res.json({ message: 'Đăng xuất thành công' });

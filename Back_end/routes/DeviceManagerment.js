@@ -93,13 +93,13 @@ router.get('/devicesAuth', authenticateToken, async (req, res) => {
 
 router.put('/devicesAuth/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
-    const { device_id, assigned_userID } = req.body;
+    const { device_id, user_id } = req.body;
     try {
         const pool = getPool();
         await pool.request()
             .input('DA_id', id)
             .input('device_id', device_id)
-            .input('assigned_userID', assigned_userID)
+            .input('assigned_userID', user_id)
             .query(`
                 UPDATE DevicesAuthorization
                 SET device_id = @device_id, assigned_userID = @assigned_userID
@@ -137,7 +137,6 @@ const generateDeviceAuthId = () => {
 router.post('/devicesAuth', authenticateToken, async (req, res) => {
     try {
         const { device_id, user_id } = req.body;
-
         const pool = getPool();
         await pool.request()
             .input("DA_id", generateDeviceAuthId())

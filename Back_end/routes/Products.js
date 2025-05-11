@@ -17,7 +17,9 @@ router.get('/products', authenticateToken, async (req, res) => {
         p.unit_price,
         CONVERT(varchar, p.production_date, 23) as production_date,
         CONVERT(varchar, p.expiration_date, 23) as expiration_date,
-        s.supplier_name
+        s.supplier_name,
+        p.category_id,
+        p.supplier_id
       FROM Products p
       INNER JOIN Category c ON p.category_id = c.category_id
       LEFT JOIN Supplier s ON p.supplier_id = s.supplier_id
@@ -35,7 +37,7 @@ router.put('/products/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   const {
     name, unit_price, production_date,
-    expiration_date, barcode
+    expiration_date, barcode, category_id, supplier_id
   } = req.body;
 
   try {
@@ -47,13 +49,16 @@ router.put('/products/:id', authenticateToken, async (req, res) => {
       .input('production_date', sql.Date, production_date)
       .input('expiration_date', sql.Date, expiration_date)
       .input('barcode', sql.VarChar, barcode)
+      .input('category_id', sql.VarChar, category_id)
+      .input('supplier_id', sql.VarChar, supplier_id)
       .query(`
         UPDATE Products
         SET name = @name,
             unit_price = @unit_price,
             production_date = @production_date,
             expiration_date = @expiration_date,
-            barcode = @barcode
+            barcode = @barcode, category_id= @category_id,
+            supplier_id = @supplier_id
         WHERE product_id = @id
       `);
 

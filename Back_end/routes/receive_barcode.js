@@ -58,12 +58,20 @@ router.post("/receive_barcode_ESP", barcodeLimiter, async (req, res) => {
 
         // Truy vấn kiểm tra thiết bị đã được phân quyền cho user nào chưa
         const pool = getPool();
-        const [userID] = await pool.request()
+        const result = await pool.request()
+<<<<<<< HEAD
+            .input("device_id", device_id)
+            .query(`SELECT assigned_userID FROM DevicesAuthorization WHERE device_id = @device_id`);
+
+        const userID = result.recordset;
+=======
         .input("device_id", device_id)
-        .query(
-            `SELECT assigned_userID FROM DevicesAuthorization WHERE device_id = @device_id`,
-        );
+        .query(`SELECT assigned_userID FROM DevicesAuthorization WHERE device_id = @device_id`);
+    
+        const userID = result.recordset;
+
         console.log("assigned_userID", userID);
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
 
         // Nếu không có ai được phân quyền thiết bị này, thì bỏ qua xử lý
         if (userID.length === 0) {
@@ -90,17 +98,33 @@ router.post("/receive_barcode_ESP", barcodeLimiter, async (req, res) => {
             const internalSignature = createSignature(cleanBarcode, device_id, device_type);
 
             // Gửi dữ liệu tới endpoint nội bộ (đã xác thực trước)
-            await axios.post(`http://localhost:3000${apiEndpoint}`, {
-                barcode: cleanBarcode,
-                device_id: device_id,
-                userid: userID
-            }, {
-                headers: {
-                    Authorization: `Bearer ${AUTH_TOKEN}`,
-                    'x-signature': internalSignature,
-                },
-                timeout: 10000
-            });
+            try {
+                const response = await axios.post(
+                    `https://warehouse-management-r8on.onrender.com${apiEndpoint}`,
+                    {
+                        barcode: cleanBarcode,
+                        device_id: device_id,
+                        userid: userID,
+                    },
+                    {
+                        headers: {
+                            Authorization: `Bearer ${AUTH_TOKEN}`,
+                            'x-signature': internalSignature,
+                        },
+                        timeout: 10000
+                    }
+                );
+
+                console.log("API Response:", response.data);
+                
+                if (response.status !== 200) {
+                    console.error("Failed to process barcode:", response.status, response.data);
+                    return res.status(response.status).json({ error: "Failed to process barcode" });
+                }
+            } catch (error) {
+                console.error("Error while calling API:", error.response ? error.response.data : error.message);
+                return res.status(500).json({ error: "Error processing barcode" });
+            }
 
         } else {
             console.error("Invalid barcode length:", cleanBarcode);

@@ -62,6 +62,7 @@ router.get("/search_products", authenticateToken, async (req, res) => {
 });
 
 let cachedBarcode = null;
+let cachedUser = null;
 // Nhận mã vạch từ ESP8266 và kiểm tra sản phẩm trong cơ sở dữ liệu
 router.post("/barcode_import", async (req, res) => {
     const { barcode, device_id, userid } = req.body;
@@ -99,24 +100,11 @@ router.post("/barcode_import", async (req, res) => {
 
     try {
         console.log(`Received import barcode: ${barcode} - Device_id: ${device_id}`);
-        try {
-            const res = await fetch("http://localhost:3000/api/profile", {
-                method: "GET",
-                credentials: "include", // Quan trọng để gửi cookie
-            });
 
-            if (res.ok) {
-                const data = await res.json();
-                const user = data.user;
-            }
-        } catch (err) {
-            console.error("Không thể lấy thông tin người dùng:", err);
-        }
-
-        const check_auth = userid.find(use.user_id);
-        if (check_auth) {
-            cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
-        }
+        cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
+        cachedUser = userid;
+        console.log("Barcode gửi đi: ",cachedBarcode);
+        console.log("User gửi đi: ", cachedUser);
 
         res.status(200).json({ message: "Barcode received successfully." });
     } catch (error) {
@@ -142,14 +130,16 @@ router.get("/barcode_fetch", authenticateToken, async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     find: true,
-                    product: localResult.recordset[0]
+                    product: localResult.recordset[0],
+                    assignedUser: cachedUser
                 });
             } else {
                 return res.status(200).json({
                     success: true,
                     find: false,
                     barcode: result,
-                    message: "Product not found in the database"
+                    message: "Product not found in the database",
+                    assignedUser: cachedUser
                 });
             }
         } else {

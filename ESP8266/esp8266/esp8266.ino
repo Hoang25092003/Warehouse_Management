@@ -12,10 +12,6 @@
 
 // Chân nút reset
 #define RESET_BUTTON_PIN 0  //D3 = GPIO0
-// Chân White LED chỉ báo
-#define WHITE_LED_PIN 2  //D4 = GPIO2
-// Chân Yellow LED chỉ báo
-#define YELLOW_LED_PIN 4  //D5 = GPIO14
 
 // Cổng ESP Config
 ESP8266WebServer server(80);
@@ -27,8 +23,12 @@ const unsigned long REQUEST_INTERVAL = 500;
 
 
 // Biến lưu cấu hình
-const String serverBase = "http://192.168.1.71:3000";
-// const String server = "https://warehouse-management-r8on.onrender.com";
+<<<<<<< HEAD
+// const String serverBase = "http://192.168.1.5:3000";
+=======
+// const String serverBase = "http://192.168.1.71:3000";
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
+const String serverBase = "https://warehouse-management-r8on.onrender.com";
 const String serverUrl = serverBase + "/api/receive_barcode_ESP";
 const String device_id = "DEV001";
 
@@ -37,8 +37,13 @@ String password = "";
 String device_type = "";
 
 // Biến xử lý nút reset
+volatile bool resetInProgress = false;
 volatile bool isResetPressed = false;
-unsigned long resetPressedTime = 0;
+volatile unsigned long resetPressedTime = 0;
+
+// Biến xử lý đèn chỉ báo
+bool indicateSuccess = false;
+bool indicateFailure = false;
 
 void ICACHE_RAM_ATTR handleResetButton();  // Khai báo hàm ISR
 
@@ -55,12 +60,6 @@ void setup() {
   pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(RESET_BUTTON_PIN), handleResetButton, CHANGE);
 
-  // setup WHITE LED
-  setupWhiteLED();
-
-  // setup YELOOW LED
-  setupYellowLED();
-
   if (!connectWiFi()) {
     setupAPMode();  //chế độ Access Point
   }
@@ -76,7 +75,15 @@ void loop() {
     lastRequestTime = millis();
   }
 
+  if (resetInProgress && (millis() - resetPressedTime >= 3000)) {
+    isResetPressed = true;
+    resetInProgress = false;  // Đảm bảo chỉ kích hoạt một lần
+  }
+<<<<<<< HEAD
   checkResetButton();  // kiểm tra trạng thái nút
+=======
+    checkResetButton();  // kiểm tra trạng thái nút
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
 
   server.handleClient();  // Xử lý yêu cầu HTTP (nếu đang ở chế độ cấu hình)
   delay(500);
@@ -104,9 +111,15 @@ bool connectWiFi() {
 void setupAPMode() {
   // Xóa EEPROM
   for (int i = 0; i < EEPROM_SIZE; i++) {
-    EEPROM.write(i, 0xFF); // Xóa từng ô nhớ
+    EEPROM.write(i, 0xFF);  // Xóa từng ô nhớ
   }
-  EEPROM.commit(); // Ghi thay đổi vào flash
+  EEPROM.commit();  // Ghi thay đổi vào flash
+<<<<<<< HEAD
+  ssid = "";
+  password = "";
+  device_type = "";
+=======
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
   Serial.println("EEPROM has been erased.");
 
   WiFi.softAP("ESP8266_Config");
@@ -136,7 +149,6 @@ void requestBarcodeFromArduino() {
     Serial.println(receivedBarcode);
     sendToServer(receivedBarcode);
   } else {
-    indicateFailure();  // chỉ báo thất bại
     Serial.println("Invalid barcode received. Ignoring...");
   }
 }
@@ -174,10 +186,10 @@ void sendToServer(const char* barcode) {
     return;
   }
 
-  // WiFiClientSecure client;
-  // client.setInsecure();  // Bỏ qua xác minh chứng chỉ SSL
+  WiFiClientSecure client;
+  client.setInsecure();  // Bỏ qua xác minh chứng chỉ SSL
 
-  WiFiClient client;
+  // WiFiClient client;
   HTTPClient http;
   http.setTimeout(10000);
 
@@ -198,14 +210,19 @@ void sendToServer(const char* barcode) {
     String response = http.getString();
     Serial.println("Server response: " + response);
     // Hiện đèn báo thành công
-    if (httpCode == 200) indicateSuccess();
+    if (httpCode == 200) {
+      indicateSuccess = true;
+      indicateFailure = false;
+    }
   } else {
     Serial.printf("HTTP Code: %d\n", httpCode);
     Serial.printf("HTTP Error: %s\n", http.errorToString(httpCode).c_str());
   }
   // Hiện đèn báo thất bại
-  if (httpCode != 200) indicateFailure();
-
+  if (httpCode != 200) {
+    indicateSuccess = false;
+    indicateFailure = true;
+  }
   http.end();
 }
 // ------------------- HÀM EEPROM ----------------------
@@ -243,19 +260,100 @@ void loadConfigFromEEPROM() {
   device_type = readStringFromEEPROM(64, 32);
 }
 
-// --------- GIAO DIỆN FORM CẤU HÌNH -------------------
 void handleRoot() {
   int n = WiFi.scanNetworks();
-  String html = "<html><body><h2>ESP8266 Config</h2><form action='/save' method='POST'>";
+<<<<<<< HEAD
+  String html = "<!DOCTYPE html><html><head>";
+  html += "<meta charset='UTF-8'>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+  html += "<style>";
+  html += "body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }";
+  html += "form { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; "
+          "box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }";
+  html += "h2 { text-align: center; }";
+  html += "label { display: block; margin-top: 15px; font-weight: bold; }";
+  html += "input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 5px; }";
+  html += ".password-wrapper { position: relative; }";
+  html += ".toggle-password { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); cursor: pointer; font-size: 16px; }";
+  html += "button { width: 100%; padding: 10px; background-color: #28a745; color: white; font-weight: bold; "
+          "border: none; border-radius: 5px; margin-top: 20px; cursor: not-allowed; opacity: 0.6; }";
+  html += "button.enabled { cursor: pointer; opacity: 1; }";
+  html += "#loading { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }";
+  html += ".spinner { border: 5px solid #f3f3f3; border-top: 5px solid #28a745; border-radius: 50%; "
+          "width: 40px; height: 40px; animation: spin 1s linear infinite; margin: auto; }";
+  html += "@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }";
+  html += "</style>";
+  html += "<script>";
+  html += "function validatePassword() {";
+  html += "  const pass = document.getElementById('pass');";
+  html += "  const btn = document.getElementById('submit');";
+  html += "  if (pass.value.length >= 8) {";
+  html += "    btn.classList.add('enabled'); btn.disabled = false;";
+  html += "  } else {";
+  html += "    btn.classList.remove('enabled'); btn.disabled = true;";
+  html += "  }";
+  html += "}";
+  html += "function showSpinner() {";
+  html += "  document.getElementById('form-content').style.opacity = '0.3';";
+  html += "  document.getElementById('loading').style.display = 'block';";
+  html += "}";
+  html += "function togglePassword() {";
+  html += "  var pass = document.getElementById('pass');";
+  html += "  var icon = document.getElementById('eye');";
+  html += "  if (pass.type === 'password') { pass.type = 'text'; icon.textContent = '🙈'; }";
+  html += "  else { pass.type = 'password'; icon.textContent = '👁️'; }";
+  html += "}";
+  html += "</script>";
+  html += "</head><body>";
+  html += "<h2>Cấu hình WiFi</h2>";
+  html += "<form action='/save' method='POST' onsubmit='showSpinner()'>";
+  html += "<div id='form-content'>";
+
+  // SSID
+  html += "<label for='ssid'>WiFi SSID:</label>";
+  html += "<select name='ssid'>";
+=======
+  String html = "<html><head><meta charset='UTF-8'></head><body>";
+  html += "<h2>ESP8266 Config</h2><form action='/save' method='POST'>";
   html += "SSID: <select name='ssid'>";
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
   for (int i = 0; i < n; ++i) {
     String s = WiFi.SSID(i);
     html += "<option value='" + s + "'";
     if (s == ssid) html += " selected";
     html += ">" + s + "</option>";
   }
-  html += "</select><br>";
+  html += "</select>";
 
+<<<<<<< HEAD
+  //Device ID
+  html += "<label>Mã thiết bị:</label><input type='text' value='" + device_id + "' readonly>";
+
+  // Password
+  html += "<label for='password'>Mật khẩu WiFi:</label>";
+  html += "<div class='password-wrapper'>";
+  html += "<input type='password' id='pass' name='password' value='" + password + "' oninput='validatePassword()'>";
+  html += "<span class='toggle-password' id='eye' onclick='togglePassword()'>👁️</span>";
+  html += "</div>";
+
+  // Device type
+  html += "<label for='device_type'>Loại thiết bị:</label>";
+  html += "<select name='device_type'>";
+  html += "<option value='import'" + String(device_type == "import" ? " selected" : "") + ">Nhập hàng 🔴</option>";
+  html += "<option value='export'" + String(device_type == "export" ? " selected" : "") + ">Xuất hàng 🟢</option>";
+  html += "<option value='check'" + String(device_type == "check" ? " selected" : "") + ">Kiểm hàng 🔵</option>";
+  html += "</select>";
+
+  // Submit
+  html += "<button id='submit' type='submit' disabled>Thiết lập cấu hình</button>";
+  html += "</div>";
+
+  // Spinner
+  html += "<div id='loading'><div class='spinner'></div></div>";
+
+  html += "</form></body></html>";
+
+=======
   html += "Password: <input type='password' name='password' value='" + password + "'><br>";
   html += "Device Type: <select name='device_type'>";
   html += "<option value='check'" + String(device_type == "check" ? " selected" : "") + ">Kiểm hàng</option>";
@@ -263,8 +361,11 @@ void handleRoot() {
   html += "<option value='export'" + String(device_type == "export" ? " selected" : "") + ">Xuất hàng</option>";
   html += "</select><br><input type='submit' value='Save & Reboot'></form></body></html>";
 
-  server.send(200, "text/html", html);
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
+  server.send(200, "text/html; charset=UTF-8", html);
 }
+
+
 
 //Xử lý lưu thông tin sau khi người dùng gửi form cấu hình
 void handleSave() {
@@ -273,11 +374,53 @@ void handleSave() {
   device_type = server.arg("device_type");
 
   saveConfigToEEPROM();
+  delay(200);
+  bool checkConnectToWifi = connectWiFi();
+  delay(200);
+  if (checkConnectToWifi) {
+    server.send(200, "text/html",
+                "<!DOCTYPE html><html><head>"
+                "<meta charset='UTF-8'>"
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                "<meta http-equiv='refresh' content='5'>"
+                "<style>"
+                "body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }"
+                ".container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; "
+                "box-shadow: 0 0 10px rgba(0,0,0,0.1); text-align: center; }"
+                "h2 { color: #28a745; }"
+                "p { font-size: 16px; color: #333; }"
+                "</style></head><body>"
+                "<div class='container'>"
+                "<h2>✅ Cấu hình đã được lưu!</h2>"
+                "<p>Thiết bị sẽ khởi động lại để kết nối WiFi mới.</p>"
+                "<p>Nếu không kết nối được, thiết bị sẽ tự động quay về chế độ cấu hình.</p>"
+                "</div></body></html>");
 
-  server.send(200, "text/html", "<html><body><h2>Saved! Rebooting...</h2></body></html>");
-  delay(3000);
-  ESP.restart();
+    delay(1000);
+    ESP.restart();
+  } else {
+    setupAPMode();
+    server.send(200, "text/html",
+                "<!DOCTYPE html><html><head>"
+                "<meta charset='UTF-8'>"
+                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+                "<meta http-equiv='refresh' content='5; URL=/' />"
+                "<style>"
+                "body { font-family: Arial, sans-serif; background-color: #fff0f0; padding: 20px; }"
+                ".container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 10px; "
+                "box-shadow: 0 0 10px rgba(255,0,0,0.1); text-align: center; }"
+                "h2 { color: #dc3545; }"
+                "p { font-size: 16px; color: #333; }"
+                "</style></head><body>"
+                "<div class='container'>"
+                "<h2>❌ Kết nối WiFi thất bại!</h2>"
+                "<p>Vui lòng kiểm tra lại SSID và Mật khẩu.</p>"
+                "<p>Đang quay lại trang cấu hình...</p>"
+                "</div></body></html>");
+  }
 }
+
+
 
 // Khởi tạo WebServer để cấu hình qua trình duyệt
 void startWebServer() {
@@ -291,16 +434,19 @@ void startWebServer() {
 void ICACHE_RAM_ATTR handleResetButton() {
   if (digitalRead(RESET_BUTTON_PIN) == LOW) {  // Nút được nhấn
     resetPressedTime = millis();
+    resetInProgress = true;
   } else {  // Nút được thả
-    if (millis() - resetPressedTime >= 3000) {
-      isResetPressed = true;
-    }
+    resetInProgress = false;
   }
 }
 
 void checkResetButton() {
   if (isResetPressed) {
     isResetPressed = false;
+
+    indicateSuccess = false;
+    indicateFailure = false;
+    Serial.println("-------------------Reset ESP8266!---------------------");
     setupAPMode();  // Chuyển sang chế độ Access Point
   }
 }
@@ -308,32 +454,19 @@ void checkResetButton() {
 // ------------------- HÀM XỬ LÝ RGB LED ----------------------
 // Gửi device_type tới Arduino qua I2C
 void sendDeviceTypeToArduino() {
-  Wire.beginTransmission(8);        // I2C address of Arduino
-  Wire.write(device_type.c_str());  // Gửi chuỗi device_type
+  // Tạo buffer gửi, tối đa 32 byte (I2C limit)
+  char buffer[32] = { 0 };
+
+  // Format: "TYPE:check;S:1;F:0"
+  snprintf(buffer, sizeof(buffer), "TYPE:%s;S:%d;F:%d",
+           device_type.c_str(),
+           indicateSuccess ? 1 : 0,
+           indicateFailure ? 1 : 0);
+
+  Wire.beginTransmission(8);  // Arduino có địa chỉ I2C là 8
+  Wire.write(buffer);         // Gửi cả chuỗi
   Wire.endTransmission();
-  Serial.println("Device ID sent to Arduino: " + device_type);
-}
 
-// ------------------- HÀM XỬ LÝ WHITE LED CHỈ BÁO ----------------------
-void indicateSuccess() {
-  digitalWrite(WHITE_LED_PIN, HIGH);
-  delay(500);
-  digitalWrite(WHITE_LED_PIN, LOW);
-}
-
-void setupWhiteLED() {
-  pinMode(WHITE_LED_PIN, OUTPUT);
-  digitalWrite(WHITE_LED_PIN, LOW);
-}
-
-// ------------------- HÀM XỬ LÝ YELLOW LED CHỈ BÁO ----------------------
-void indicateFailure() {
-  digitalWrite(YELLOW_LED_PIN, HIGH);
-  delay(500);
-  digitalWrite(YELLOW_LED_PIN, LOW);
-}
-
-void setupYellowLED() {
-  pinMode(YELLOW_LED_PIN, OUTPUT);
-  digitalWrite(YELLOW_LED_PIN, LOW);
+  Serial.print("Sent to Arduino: ");
+  Serial.println(buffer);
 }

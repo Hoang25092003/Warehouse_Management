@@ -1,13 +1,13 @@
 const sql = require('mssql');
 
 const dbConfig = {
-  user: 'WarehouseManagementRemote',
-  password: 'fit@vmiaru',
-  server: '100.119.167.61',
-  database: 'WarehouseManagement',
+  user: 'hoang03_SQLLogin_1', // Tên người dùng trên Somee
+  password: 'hoanghuypham2509', // Mật khẩu bạn đặt cho tài khoản này
+  server: 'warehousemanagerment.mssql.somee.com', // Server address từ trang Somee
+  database: 'warehousemanagerment', // Tên chính xác của CSDL
   options: {
-    encrypt: true,
-    trustServerCertificate: true,
+    encrypt: true,                   // Một số nhà cung cấp yêu cầu bật cái này
+    trustServerCertificate: true,   // Bắt buộc phải bật vì Somee không có chứng chỉ SSL hợp lệ
     enableArithAbort: true
   }
 };
@@ -17,9 +17,13 @@ let pool;
 async function connectDB() {
   try {
     pool = await sql.connect(dbConfig);
-    console.log('✅ Đã kết nối tới CSDL SQL Server');
+<<<<<<< HEAD
+    console.log('✅ Đã kết nối tới Database');
+=======
+    console.log('✅ Đã kết nối tới SQL Server trên Somee');
+>>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
   } catch (err) {
-    console.error('❌ Lỗi kết nối CSDL:', err);
+    console.error('❌ Lỗi kết nối tới SQL Server:', err);
   }
 }
 

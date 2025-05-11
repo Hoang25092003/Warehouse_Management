@@ -3,6 +3,7 @@ const router = express.Router();
 const { getPool } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../middleware/auth');
+const crypto = require('crypto');
 const SECRET_KEY = "WarehouseManagermentIoT"
 const AUTH_TOKEN = "TokenIoTVMU"
 
@@ -64,9 +65,10 @@ router.get("/search_export_products", authenticateToken, async (req, res) => {
 });
 
 let cachedBarcode = null;
+let cachedUser = null;
 // Nhận mã vạch từ ESP8266 và kiểm tra sản phẩm trong cơ sở dữ liệu
 router.post("/barcode_export", async (req, res) => {
-    const { barcode, device_id } = req.body;
+    const { barcode, device_id, userid } = req.body;
     const token = req.headers.authorization;
     const signature = req.headers["x-signature"];
     const device_type = "export";
@@ -86,6 +88,11 @@ router.post("/barcode_export", async (req, res) => {
         console.log("device ID is missing in the request body.");
         return res.status(400).json({ message: "device ID is required" });
     }
+
+    if (!userid) {
+        console.log("userid is missing in the request body.");
+        return res.status(400).json({ message: "userid is required" });
+    }
     // Kiểm tra chữ ký
     const expectedSignature = createSignature(barcode, device_id, device_type);
     if (signature !== expectedSignature) {
@@ -93,26 +100,12 @@ router.post("/barcode_export", async (req, res) => {
     }
 
     try {
-        console.log(`Received export barcode: ${barcode} - Device_id: ${device_id}`);
+        console.log(`Received import barcode: ${barcode} - Device_id: ${device_id}`);
 
-        try {
-            const res = await fetch("http://localhost:3000/api/profile", {
-                method: "GET",
-                credentials: "include", // Quan trọng để gửi cookie
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                const user = data.user;
-            }
-        } catch (err) {
-            console.error("Không thể lấy thông tin người dùng:", err);
-        }
-
-        const check_auth = userid.find(use.user_id);
-        if (check_auth) {
-            cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
-        }
+        cachedBarcode = barcode; // Lưu mã vạch vào biến tạm thời
+        cachedUser = userid;
+        console.log("Barcode gửi đi: ",cachedBarcode);
+        console.log("User gửi đi: ", cachedUser);
 
         res.status(200).json({ message: "Barcode received successfully." });
     } catch (error) {
@@ -166,14 +159,16 @@ router.get("/export_barcode_fetch", authenticateToken, async (req, res) => {
                 return res.status(200).json({
                     success: true,
                     find: true,
-                    product: localResult.recordset[0]
+                    product: localResult.recordset[0],
+                    assignedUser: cachedUser
                 });
             } else {
                 return res.status(200).json({
                     success: true,
                     find: false,
                     barcode: result,
-                    message: "Product not found in the database"
+                    message: "Product not found in the database",
+                    assignedUser: cachedUser
                 });
             }
         } else {
