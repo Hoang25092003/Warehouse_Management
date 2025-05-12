@@ -17,11 +17,7 @@ let pool;
 async function connectDB() {
   try {
     pool = await sql.connect(dbConfig);
-<<<<<<< HEAD
     console.log('✅ Đã kết nối tới Database');
-=======
-    console.log('✅ Đã kết nối tới SQL Server trên Somee');
->>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
   } catch (err) {
     console.error('❌ Lỗi kết nối tới SQL Server:', err);
   }
