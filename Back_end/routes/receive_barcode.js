@@ -59,20 +59,10 @@ router.post("/receive_barcode_ESP", barcodeLimiter, async (req, res) => {
         // Truy vấn kiểm tra thiết bị đã được phân quyền cho user nào chưa
         const pool = getPool();
         const result = await pool.request()
-<<<<<<< HEAD
             .input("device_id", device_id)
             .query(`SELECT assigned_userID FROM DevicesAuthorization WHERE device_id = @device_id`);
 
         const userID = result.recordset;
-=======
-        .input("device_id", device_id)
-        .query(`SELECT assigned_userID FROM DevicesAuthorization WHERE device_id = @device_id`);
-    
-        const userID = result.recordset;
-
-        console.log("assigned_userID", userID);
->>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
-
         // Nếu không có ai được phân quyền thiết bị này, thì bỏ qua xử lý
         if (userID.length === 0) {
             console.log(`Thiết bị ${device_id} chưa được phân quyền. Bỏ qua...`);
