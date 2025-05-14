@@ -10,11 +10,7 @@ const cookieParser = require('cookie-parser');
 
 // Cấu hình CORS
 const corsOptions = {
-<<<<<<< HEAD
   origin: ['http://warehousemanagerment.site', 'https://warehousemanagerment.site', 'http://localhost:3000', 'http://localhost:3001'], 
-=======
-  origin: ['http://warehousemanagerment.site', 'http://localhost:3000', 'https://warehousemanagerment.site'], // Cho phép truy cập từ frontend (localhost:3001)
->>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true, // Cho phép gửi cookie
@@ -27,12 +23,6 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser()); // Đọc cookie từ request
 
-
-<<<<<<< HEAD
-=======
-// app.use(express.static(path.resolve(__dirname, '../Front_end/build')));
-
->>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
 // Kết nối CSDL
 connectDB();
 
@@ -58,15 +48,6 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).send('Có lỗi xảy ra trên máy chủ');
 });
-
-<<<<<<< HEAD
-=======
-// Nếu không match bất kỳ route API nào thì trả về index.html của Frontend
-// app.get('*', (req, res) => {
-//   res.sendFile(path.resolve(__dirname, '../Front_end/build/index.html'));
-// });
-
->>>>>>> a20966ec234132fecfb86fc4bb8d68dde70d8c33
 
 // Khởi động
 const port = process.env.PORT || 3000;
