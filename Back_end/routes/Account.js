@@ -18,7 +18,7 @@ router.get('/users', authenticateToken, async (req, res) => {
 });
 
 // Tạo tài khoản
-router.post('/users', authenticateToken, async (req, res) => {
+router.post('/users', authenticateToken, setSessionContext, async (req, res) => {
     const { username, email, password, role, fullname, phone } = req.body;
 
     try {
@@ -47,7 +47,7 @@ router.post('/users', authenticateToken, async (req, res) => {
 });
 
 // Cập nhật tài khoản
-router.put('/users/:id', authenticateToken, async (req, res) => {
+router.put('/users/:id', authenticateToken, setSessionContext, async (req, res) => {
     const user_id = req.params.id;
     const { username, password, fullname, phone, email, role } = req.body;
 
@@ -75,7 +75,7 @@ router.put('/users/:id', authenticateToken, async (req, res) => {
 });
 
 //Xóa tài khoản
-router.delete('/users/:id', authenticateToken, async (req, res) => {
+router.delete('/users/:id', authenticateToken, setSessionContext, async (req, res) => {
     const user_id = req.params.id;
 
     try {
