@@ -22,7 +22,7 @@ router.get('/UserInfo/:user_id', authenticateToken, async (req, res) => {
     }
 });
 
-router.put('/UserInfo', authenticateToken, async (req, res) => {
+router.put('/UserInfo', authenticateToken, setSessionContext, async (req, res) => {
     const { fullname, email, phone } = req.body;
     const user_id = req.user.user_id;
 
@@ -46,7 +46,7 @@ router.put('/UserInfo', authenticateToken, async (req, res) => {
     }
 });
 
-router.put('/AccountInfo', authenticateToken, async (req, res) => {
+router.put('/AccountInfo', authenticateToken, setSessionContext, async (req, res) => {
     const { username, password } = req.body;
     const user_id = req.user.user_id; 
 
