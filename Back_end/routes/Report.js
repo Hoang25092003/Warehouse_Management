@@ -35,7 +35,6 @@ router.get('/reports/exports', authenticateToken, async (req, res) => {
         Warehouse.name as warehouse_name
       FROM Export 
       JOIN [User] ON Export.[user_id] = [User].[user_id]
-      JOIN Warehouse ON Export.warehouse_id = Warehouse.warehouse_id
       ORDER BY Export.export_date DESC
     `);
 
@@ -51,20 +50,10 @@ router.get('/reports/inventory', authenticateToken, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
-      SELECT 
-        Products.product_id,
-        Products.name as product_name,
-        Category.category_name,
-        Warehouse.warehouse_id,
-        Warehouse.name as warehouse_name,
-        Inventory.stock_quantity,
-        Products.unit_price,
-        Products.expiration_date
-      FROM Inventory
-      JOIN ProductsON Inventory.product_id = Products.product_id
-      JOIN Warehouse ON Inventory.warehouse_id = Warehouse.warehouse_id
-      JOIN Category ON Products.category_id = Category.category_id
-      ORDER BY Warehouse.name, Products.name
+      SELECT Inventory.*, Warehouse.name as warehouse_name, Products.name as product_name
+    FROM Inventory
+    INNER JOIN Warehouse ON Inventory.warehouse_id = Warehouse.warehouse_id
+    INNER JOIN Products ON Products.product_id = Inventory.product_id
     `);
 
     res.json(result.recordset);
