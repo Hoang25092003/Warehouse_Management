@@ -33,7 +33,7 @@ router.get('/products', authenticateToken, async (req, res) => {
 });
 
 // Sửa sản phẩm
-router.put('/products/:id', authenticateToken, async (req, res) => {
+router.put('/products/:id', authenticateToken, setSessionContext, async (req, res) => {
   const { id } = req.params;
   const {
     name, unit_price, production_date,
@@ -70,7 +70,7 @@ router.put('/products/:id', authenticateToken, async (req, res) => {
 });
 
 // Xóa sản phẩm
-router.delete('/products/:id', authenticateToken, async (req, res) => {
+router.delete('/products/:id', authenticateToken, setSessionContext, async (req, res) => {
   const { id } = req.params;
 
   try {
