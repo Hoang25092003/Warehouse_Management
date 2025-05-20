@@ -31,8 +31,7 @@ router.get('/reports/exports', authenticateToken, async (req, res) => {
     const result = await pool.request().query(`
       SELECT 
         Export.*,
-        [User].[fullname] as fullname,
-        Warehouse.name as warehouse_name
+        [User].[fullname] as fullname
       FROM Export 
       JOIN [User] ON Export.[user_id] = [User].[user_id]
       ORDER BY Export.export_date DESC
