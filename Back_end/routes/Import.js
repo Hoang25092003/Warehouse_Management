@@ -155,7 +155,7 @@ router.get("/barcode_fetch", authenticateToken, async (req, res) => {
 });
 
 // Thêm sản phẩm mới vào cơ sở dữ liệu
-router.post("/save_new_product", authenticateToken, async (req, res) => {
+router.post("/save_new_product", authenticateToken, setSessionContext, async (req, res) => {
     const { product_id, barcode, name, category_id, quantity, unit_price, production_date, expiration_date, supplier_id } = req.body;
 
     if (!barcode || !name) {
@@ -211,7 +211,7 @@ const generateImportDetailId = () => {
 };
 
 // Xác nhận nhập hàng
-router.post("/imports_confirm", authenticateToken, async (req, res) => {
+router.post("/imports_confirm", authenticateToken, setSessionContext, async (req, res) => {
     const { contents, products } = req.body;
 
     if (!contents || !products) {
