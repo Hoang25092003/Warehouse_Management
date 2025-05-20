@@ -49,10 +49,11 @@ router.get('/reports/inventory', authenticateToken, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
-      SELECT Inventory.*, Warehouse.name as warehouse_name, Products.name as product_name
+      SELECT Inventory.*, Warehouse.name as warehouse_name, Products.name as product_name, Products.unit_price, Products.expiration_date, Category.category_name
     FROM Inventory
     INNER JOIN Warehouse ON Inventory.warehouse_id = Warehouse.warehouse_id
     INNER JOIN Products ON Products.product_id = Inventory.product_id
+    INNER JOIN Category ON Products.category_id = Category.category_id
     `);
 
     res.json(result.recordset);
