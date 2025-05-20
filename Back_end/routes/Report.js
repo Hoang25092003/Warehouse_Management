@@ -81,7 +81,7 @@ router.get('/savedreports', authenticateToken, async (req, res) => {
 });
 
 // Lưu báo cáo mới
-router.post('/reports', authenticateToken, async (req, res) => {
+router.post('/reports', authenticateToken, setSessionContext, async (req, res) => {
   try {
     const { report_type, user_id, content } = req.body;
     const report_id = 'REP-' + Date.now().toString().slice(-6);
