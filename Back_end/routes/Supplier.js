@@ -16,7 +16,7 @@ router.get('/suppliers', authenticateToken, async (req, res) => {
       }
 });
 
-router.post('/suppliers', authenticateToken, async (req, res) => {
+router.post('/suppliers', authenticateToken, setSessionContext, async (req, res) => {
     try {
         const { supplier_name, contact_person, phone, email, address } = req.body;
         const supplier_id = 'SUP-' + Date.now().toString().slice(-6);
@@ -40,7 +40,7 @@ router.post('/suppliers', authenticateToken, async (req, res) => {
     }
 });
 
-router.put('/suppliers/:id', authenticateToken, async (req, res) => {
+router.put('/suppliers/:id', authenticateToken, setSessionContext, async (req, res) => {
     const { id } = req.params;
     const { supplier_name, contact_person, phone, email, address } = req.body;
     try {
@@ -65,7 +65,7 @@ router.put('/suppliers/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.delete('/suppliers/:id', authenticateToken, async (req, res) => {
+router.delete('/suppliers/:id', authenticateToken, setSessionContext, async (req, res) => {
     const { id } = req.params;
     try {
         const pool = getPool();
