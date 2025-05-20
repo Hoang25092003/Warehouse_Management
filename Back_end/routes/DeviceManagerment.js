@@ -17,7 +17,7 @@ router.get('/devices', authenticateToken, async (req, res) => {
     }
 });
 
-router.post('/devices', authenticateToken, async (req, res) => {
+router.post('/devices', authenticateToken, setSessionContext, async (req, res) => {
     try {
         const { device_id, device_name, device_type, device_description } = req.body;
 
@@ -38,7 +38,7 @@ router.post('/devices', authenticateToken, async (req, res) => {
     }
 });
 
-router.put('/devices/:id', authenticateToken, async (req, res) => {
+router.put('/devices/:id', authenticateToken, setSessionContext, async (req, res) => {
     const { id } = req.params;
     const { device_name, device_type, device_description } = req.body;
     try {
@@ -60,7 +60,7 @@ router.put('/devices/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.delete('/devices/:id', authenticateToken, async (req, res) => {
+router.delete('/devices/:id', authenticateToken, setSessionContext, async (req, res) => {
     const { id } = req.params;
     try {
         const pool = getPool();
@@ -91,7 +91,7 @@ router.get('/devicesAuth', authenticateToken, async (req, res) => {
     }
 });
 
-router.put('/devicesAuth/:id', authenticateToken, async (req, res) => {
+router.put('/devicesAuth/:id', authenticateToken, setSessionContext, async (req, res) => {
     const { id } = req.params;
     const { device_id, user_id } = req.body;
     try {
@@ -112,7 +112,7 @@ router.put('/devicesAuth/:id', authenticateToken, async (req, res) => {
     }
 });
 
-router.delete('/devicesAuth/:id', authenticateToken, async (req, res) => {
+router.delete('/devicesAuth/:id', authenticateToken, setSessionContext, async (req, res) => {
     const { id } = req.params;
     try {
         const pool = getPool();
@@ -134,7 +134,7 @@ const generateDeviceAuthId = () => {
     return `DA-${shortUuid}`;
 };
 
-router.post('/devicesAuth', authenticateToken, async (req, res) => {
+router.post('/devicesAuth', authenticateToken, setSessionContext, async (req, res) => {
     try {
         const { device_id, user_id } = req.body;
         const pool = getPool();
