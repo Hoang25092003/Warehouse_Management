@@ -18,7 +18,7 @@ router.get('/warehouses', authenticateToken, async (req, res) => {
 });
 
 // Thêm kho mới
-router.post('/warehouses', authenticateToken, async (req, res) => {
+router.post('/warehouses', authenticateToken, setSessionContext, async (req, res) => {
   try {
     const { name, location, capacity, current_capacity, status } = req.body;
     const warehouse_id = 'WH-' + Date.now().toString().slice(-6);
@@ -43,7 +43,7 @@ router.post('/warehouses', authenticateToken, async (req, res) => {
 });
 
 // Cập nhật kho
-router.put('/warehouses/:id', authenticateToken, async (req, res) => {
+router.put('/warehouses/:id', authenticateToken, setSessionContext, async (req, res) => {
   const { id } = req.params;
   const { name, location, capacity, status } = req.body;
   try {
@@ -67,7 +67,7 @@ router.put('/warehouses/:id', authenticateToken, async (req, res) => {
 });
 
 // Xóa kho
-router.delete('/warehouses/:id', authenticateToken, async (req, res) => {
+router.delete('/warehouses/:id', authenticateToken, setSessionContext, async (req, res) => {
   const { id } = req.params;
   try {
     const pool = getPool();
