@@ -10,8 +10,7 @@ router.get('/reports/imports', authenticateToken, async (req, res) => {
     const result = await pool.request().query(`
       SELECT 
         Import.*,
-        [User].[fullname] as fullname,
-        Warehouse.name as warehouse_name
+        [User].[fullname] as fullname
       FROM Import 
       JOIN [User] ON Import.[user_id] = [User].[user_id]
       JOIN Warehouse ON Import.warehouse_id = Warehouse.warehouse_id
