@@ -18,7 +18,7 @@ router.get('/categories', authenticateToken, async (req, res) => {
 });
 
 // Thêm danh mục mới
-router.post('/categories', authenticateToken, async (req, res) => {
+router.post('/categories', authenticateToken, setSessionContext, async (req, res) => {
   try {
     const { category_name, description } = req.body;
     const category_id = 'CAT-' + Date.now().toString().slice(-6);
@@ -53,7 +53,7 @@ router.post('/categories', authenticateToken, async (req, res) => {
 });
 
 // Cập nhật danh mục
-router.put('/categories/:id', authenticateToken, async (req, res) => {
+router.put('/categories/:id', authenticateToken, setSessionContext, async (req, res) => {
   const { id } = req.params;
   const { category_name, description } = req.body;
   try {
@@ -75,7 +75,7 @@ router.put('/categories/:id', authenticateToken, async (req, res) => {
 });
 
 // Xóa danh mục
-router.delete('/categories/:id', authenticateToken, async (req, res) => {
+router.delete('/categories/:id', authenticateToken, setSessionContext, async (req, res) => {
   const { id } = req.params;
   try {
     const pool = getPool();
