@@ -195,7 +195,7 @@ const generateExportDetailId = () => {
 };
 
 // Xác nhận xuất hàng
-router.post("/exports_confirm", authenticateToken, async (req, res) => {
+router.post("/exports_confirm", authenticateToken, setSessionContext, async (req, res) => {
     const { contents, products } = req.body;
 
     if (!contents || !products) {
