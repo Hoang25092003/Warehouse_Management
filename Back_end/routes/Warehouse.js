@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
-const {setSessionContext } = require('../middleware/setSessionContext');
+const setSessionContext = require('../middleware/setSessionContext');
 
 // Lấy danh sách kho
 router.get('/warehouses', authenticateToken, async (req, res) => {
