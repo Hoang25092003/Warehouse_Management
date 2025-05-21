@@ -7,7 +7,9 @@ router.get('/actionLog', authenticateToken, async (req, res) => {
     try {
         const pool = getPool();
         const result = await pool.request().query(`
-          SELECT * FROM ActionLog ORDER BY action_time
+          SELECT ActionLog.*, [User].fullname, [User].username FROM ActionLog
+        INNER JOIN [User] ON ActionLog.user_id = [User].user_id
+        ORDER BY action_time
         `);
         res.json(result.recordset);
     } catch (error) {
