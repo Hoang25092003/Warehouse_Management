@@ -3,6 +3,7 @@ const router = express.Router();
 const { getPool } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../middleware/auth');
+const {setSessionContext } = require('../middleware/setSessionContext');
 const crypto = require('crypto');
 const SECRET_KEY = "WarehouseManagermentIoT"
 const AUTH_TOKEN = "TokenIoTVMU"
