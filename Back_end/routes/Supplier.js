@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getPool } = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
-const {setSessionContext } = require('../middleware/setSessionContext');
+const setSessionContext = require('../middleware/setSessionContext');
 
 router.get('/suppliers', authenticateToken, async (req, res) => {
     try {
