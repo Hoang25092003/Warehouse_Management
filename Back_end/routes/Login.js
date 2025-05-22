@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 const { authenticateToken, SECRET_KEY } = require('../middleware/auth');
 
 // Đăng nhập
@@ -14,7 +14,7 @@ router.post('/login', async (req, res) => {
   try {
     const pool = getPool();
     const request = pool.request();
-    request.input('username', sql.VarChar, username);
+    request.input('username', username);
     const result = await request.query('SELECT * FROM [User] WHERE username = @username');
 
     if (result.recordset.length === 0)
