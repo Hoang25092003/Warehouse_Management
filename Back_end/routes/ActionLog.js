@@ -104,7 +104,8 @@ router.post('/undo_action', authenticateToken, async (req, res) => {
         } else {
             return res.status(400).json({ error: 'Không hỗ trợ loại thao tác này' });
         }
-
+        await request.input('log_id', log_id).query(`UPDATE ActionLog SET is_undo = 1 WHERE log_id = @log_id`);
+        await pool.request().query(`EXEC sp_set_session_context @key = N'is_undo', @value = 1`);
         await request.query(undoQuery);
         return res.json({ success: true, message: 'Hoàn tác thành công' });
 
