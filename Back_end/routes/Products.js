@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
 const setSessionContext  = require('../middleware/setSessionContext');
 
@@ -44,14 +44,14 @@ router.put('/products/:id', authenticateToken, setSessionContext, async (req, re
   try {
     const pool = getPool();
     await pool.request()
-      .input('id', sql.VarChar, id)
-      .input('name', sql.NVarChar, name)
-      .input('unit_price', sql.Decimal(10, 2), unit_price)
-      .input('production_date', sql.Date, production_date)
-      .input('expiration_date', sql.Date, expiration_date)
-      .input('barcode', sql.VarChar, barcode)
-      .input('category_id', sql.VarChar, category_id)
-      .input('supplier_id', sql.VarChar, supplier_id)
+      .input('id', id)
+      .input('name', name)
+      .input('unit_price', unit_price)
+      .input('production_date', production_date)
+      .input('expiration_date', expiration_date)
+      .input('barcode', barcode)
+      .input('category_id', category_id)
+      .input('supplier_id', supplier_id)
       .query(`
         UPDATE Products
         SET name = @name,
@@ -78,7 +78,7 @@ router.delete('/products/:id', authenticateToken, setSessionContext, async (req,
     const pool = getPool();
     const result = await pool
       .request()
-      .input('product_id', sql.VarChar, id)
+      .input('product_id', id)
       .query('DELETE FROM Products WHERE product_id = @product_id');
 
     if (result.rowsAffected[0] === 0) {
