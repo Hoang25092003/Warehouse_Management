@@ -9,6 +9,7 @@ router.get('/actionLog', authenticateToken, async (req, res) => {
         const result = await pool.request().query(`
           SELECT ActionLog.*, [User].fullname, [User].username FROM ActionLog
         INNER JOIN [User] ON ActionLog.user_id = [User].user_id
+        WHERE ISNULL(is_undo, 0) = 0
         ORDER BY action_time DESC
         `);
         res.json(result.recordset);
@@ -34,7 +35,7 @@ router.get('/search_actionLog', authenticateToken, async (req, res) => {
             SELECT ActionLog.*, [User].fullname, [User].username 
             FROM ActionLog 
             INNER JOIN [User] ON ActionLog.user_id = [User].user_id 
-            WHERE 1=1`;
+            WHERE ISNULL(is_undo, 0) = 0 AND 1=1`;
 
         if (action_type) query += ` AND action_type = @action_type`;
         if (user_id) query += ` AND ActionLog.user_id = @user_id`;
