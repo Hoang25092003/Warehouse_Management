@@ -66,7 +66,7 @@ router.post('/undo_action', authenticateToken, async (req, res) => {
 
         // Lấy thông tin từ log
         const result = await pool.request()
-            .input('log_id', sql.Int, log_id)
+            .input('log_id', log_id)
             .query(`SELECT * FROM ActionLog WHERE log_id = @log_id`);
 
         if (!result.recordset.length) {
@@ -98,7 +98,7 @@ router.post('/undo_action', authenticateToken, async (req, res) => {
             // Undo = CẬP NHẬT về trạng thái cũ
             const setClause = Object.keys(old_data).map(key => `${key} = @${key}`).join(', ');
             Object.entries(old_data).forEach(([key, value]) => request.input(key, value));
-            request.input('record_id', sql.NVarChar, record_id);
+            request.input('record_id', record_id);
             undoQuery = `UPDATE ${table} SET ${setClause} WHERE ${primaryKey} = @record_id`;
         } else {
             return res.status(400).json({ error: 'Không hỗ trợ loại thao tác này' });
