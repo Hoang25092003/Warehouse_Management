@@ -9,7 +9,7 @@ router.get('/actionLog', authenticateToken, async (req, res) => {
         const result = await pool.request().query(`
           SELECT ActionLog.*, [User].fullname, [User].username FROM ActionLog
         INNER JOIN [User] ON ActionLog.user_id = [User].user_id
-        ORDER BY action_time DESC
+        ORDER BY action_time ASC
         `);
         res.json(result.recordset);
     } catch (error) {
@@ -29,14 +29,14 @@ router.get('/search_actionLog', authenticateToken, async (req, res) => {
         if (start_date) request.input('start_date', start_date);
         if (end_date) request.input('end_date', end_date);
 
-        let query = `SELECT * FROM ActionLog WHERE 1=1`;
+        let query = `SELECT ActionLog.*, [User].fullname, [User].username FROM ActionLog INNER JOIN [User] ON ActionLog.user_id = [User].user_id WHERE 1=1`;
 
         if (action_type) query += ` AND action_type = @action_type`;
         if (user_id) query += ` AND user_id = @user_id`;
         if (start_date && end_date) {
             query += ` AND action_time BETWEEN @start_date AND @end_date`;
         }
-
+        query += `ORDER BY action_time ASC`;
         const result = await request.query(query);
         res.json(result.recordset);
     } catch (error) {
