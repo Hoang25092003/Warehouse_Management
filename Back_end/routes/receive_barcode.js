@@ -12,7 +12,7 @@ const AUTH_TOKEN = "TokenIoTVMU"
 // Giới hạn 5 lần mỗi 10 giây / IP
 const barcodeLimiter = rateLimit({
     windowMs: 10 * 1000,
-    max: 5,
+    max: 10,
     message: { error: "Too many requests, please wait." }
 });
 
