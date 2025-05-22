@@ -57,4 +57,59 @@ router.get('/search_actionLog', authenticateToken, async (req, res) => {
         res.status(500).json({ error: "Lỗi server khi tìm kiếm log" });
     }
 });
+
+router.post('/undo_action', authenticateToken, async (req, res) => {
+    const { log_id } = req.body;
+
+    try {
+        const pool = getPool();
+
+        // Lấy thông tin từ log
+        const result = await pool.request()
+            .input('log_id', sql.Int, log_id)
+            .query(`SELECT * FROM ActionLog WHERE log_id = @log_id`);
+
+        if (!result.recordset.length) {
+            return res.status(404).json({ error: 'Không tìm thấy log' });
+        }
+
+        const log = result.recordset[0];
+        const table = log.table_name;
+        const record_id = log.record_id;
+        const action_type = log.action_type;
+        const primaryKey = log.primary_key_column || Object.keys(JSON.parse(log.old_data || log.new_data))[0];
+        const old_data = log.old_data ? JSON.parse(log.old_data) : {};
+
+        let undoQuery = '';
+        const request = pool.request();
+
+        if (action_type === 'INSERT') {
+            // Undo = XÓA bản ghi vừa thêm
+            undoQuery = `DELETE FROM ${table} WHERE ${primaryKey} = @record_id`;
+            request.input('record_id', record_id);
+
+        } else if (action_type === 'DELETE') {
+            // Undo = THÊM lại bản ghi đã xóa
+            const fields = Object.keys(old_data);
+            fields.forEach(key => request.input(key, old_data[key]));
+            undoQuery = `INSERT INTO ${table} (${fields.join(',')}) VALUES (${fields.map(f => `@${f}`).join(',')})`;
+
+        } else if (action_type === 'UPDATE') {
+            // Undo = CẬP NHẬT về trạng thái cũ
+            const setClause = Object.keys(old_data).map(key => `${key} = @${key}`).join(', ');
+            Object.entries(old_data).forEach(([key, value]) => request.input(key, value));
+            request.input('record_id', sql.NVarChar, record_id);
+            undoQuery = `UPDATE ${table} SET ${setClause} WHERE ${primaryKey} = @record_id`;
+        } else {
+            return res.status(400).json({ error: 'Không hỗ trợ loại thao tác này' });
+        }
+
+        await request.query(undoQuery);
+        return res.json({ success: true, message: 'Hoàn tác thành công' });
+
+    } catch (err) {
+        console.error('Lỗi khi hoàn tác:', err);
+        return res.status(500).json({ error: 'Lỗi server khi hoàn tác' });
+    }
+});
 module.exports = router;
