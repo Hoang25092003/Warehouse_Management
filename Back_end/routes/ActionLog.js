@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPool, sql } = require('../config/db');
+const { getPool } = require('../config/db');
 const { authenticateToken } = require('../middleware/auth');
 
 router.get('/actionLog', authenticateToken, async (req, res) => {
