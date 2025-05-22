@@ -56,8 +56,16 @@ router.post("/receive_barcode_ESP", barcodeLimiter, async (req, res) => {
         const cleanBarcode = barcode.replace(/[^\x20-\x7E]/g, ""); // Loại bỏ các ký tự không thuộc ASCII in được
         console.log(`Cleaned barcode: ${cleanBarcode}`);
 
-        // Truy vấn kiểm tra thiết bị đã được phân quyền cho user nào chưa
         const pool = getPool();
+        // Cập nhật lại loại thiết bị
+        const updatedevie = await pool.request()
+            .input("device_id", device_id)
+            .input("device_type", device_type)
+            .query(`UPDATE Devices
+            SET device_type = @device_type
+            WHERE device_id = @device_id`);
+        
+        // Truy vấn kiểm tra thiết bị đã được phân quyền cho user nào chưa
         const result = await pool.request()
             .input("device_id", device_id)
             .query(`SELECT assigned_userID FROM DevicesAuthorization WHERE device_id = @device_id`);
