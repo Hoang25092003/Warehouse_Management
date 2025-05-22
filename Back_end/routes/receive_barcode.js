@@ -9,7 +9,7 @@ const SECRET_KEY = "WarehouseManagermentIoT"
 const AUTH_TOKEN = "TokenIoTVMU"
 
 
-// Giới hạn 5 lần mỗi 10 giây / IP
+// Giới hạn 1 lần mỗi giây / IP
 const barcodeLimiter = rateLimit({
     windowMs: 10 * 1000,
     max: 10,
