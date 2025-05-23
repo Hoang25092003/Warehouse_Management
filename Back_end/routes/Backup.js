@@ -4,6 +4,8 @@ const { getPool } = require('../config/db');
 const fs = require('fs');
 const path = require('path');
 const { authenticateToken } = require('../middleware/auth');
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
 
 // Thư mục backup
 const BACKUP_DIR = path.join(__dirname, '../backup');
