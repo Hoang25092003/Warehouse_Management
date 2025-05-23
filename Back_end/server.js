@@ -42,6 +42,7 @@ app.use('/api', require('./routes/receive_barcode'));
 app.use('/api', require('./routes/Profile'));
 app.use('/api', require('./routes/DeviceManagerment'));
 app.use('/api', require('./routes/ActionLog'));
+app.use('/api', require('./routes/Backup'));
 
 // Xử lý lỗi toàn cục
 app.use((err, req, res, next) => {
